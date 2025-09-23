@@ -1,2 +1,5 @@
 *.csv
 .vscode/
+*.txt
+*.dat
+*.zip
