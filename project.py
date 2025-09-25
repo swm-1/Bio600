@@ -81,7 +81,7 @@ def check(A:np.array) -> None:
         raise ValueError("The value for A when integrated is not 1")
     
 
-def Gamma(A, h=constants.h, c=constants.c, N=100, sigma=1e-20) -> float: 
+def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
    """
    Units:
