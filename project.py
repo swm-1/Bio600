@@ -77,8 +77,10 @@ def check(A:np.array) -> None:
 
     if np.isclose(integrated_A, 1.0 , rtol=1e-2) == True:
         print("This is normalized and ready to use")
+        return True
     else:
         raise ValueError("The value for A when integrated is not 1")
+        
     
 
 def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
@@ -87,8 +89,10 @@ def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, s
    Units:
    
     - cross section (chlorophyll) = 10^-20 m^2
-    - spectral irradience = Wm^-2 nm^-1
+    - spectral irradience = Wm^-2 nm^-1 -> Js^-1 m^-2 nm^-1
+    - lambda / h*C = J^-1
     - A_p(lambda) = dimensionless
+    - Number of pigments = dimensionless 
 
    """ 
    check(A)
@@ -97,7 +101,7 @@ def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, s
 
    lam_pig = np.asarray(lam_pig, dtype=float).ravel()
    lam_star = np.asarray(lam_star, dtype=float).ravel()
-   f = np.asarray(f, dtype=float).ravel()
+   f = np.asarray(f, dtype=float).ravel()  # make shape (1,)
    
    lam_star_m = lam_star * 1e-9
    A_star = np.interp(lam_star,lam_pig,A)
