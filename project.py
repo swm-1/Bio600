@@ -6,6 +6,7 @@ from scipy import constants
 import matplotlib.pyplot as plt
 import csv
 import math
+from scipy import linalg
 
 def beta_from_T(T_K: float) -> float:
     """Return beta = 1/(k_B T) in 1/eV."""
@@ -101,14 +102,14 @@ def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, s
 
    lam_pig = np.asarray(lam_pig, dtype=float).ravel()
    lam_star = np.asarray(lam_star, dtype=float).ravel()
-   f = np.asarray(f, dtype=float).ravel()  # make shape (1,)
+   f = np.asarray(f, dtype=float).ravel()  # make shape (n,)
    
    lam_star_m = lam_star * 1e-9
    A_star = np.interp(lam_star,lam_pig,A)
    photon_eq = lam_star_m / (h*c)
    integrand = photon_eq * f * A_star
    photons = np.trapezoid(integrand, lam_star)
-   gamma = N * sigma * photons
+   gamma = (N*1e5) * sigma * photons
    return gamma
 
 def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_ps: float = 10.0):
@@ -119,8 +120,8 @@ def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_ps: float = 10.0):
     """
     beta = beta_from_T(T_K)
     k_h = 1.0 / tau_ps  # ps^-1
-    gamma_calc = Gamma(A_calc(),h=constants.h, c=constants.c, N=100, sigma=1e-20)
-    gamma_ps = gamma_calc / 1e12 # convert from seconds into picoseconds
+    gamma_s = Gamma(A_calc(),h=constants.h, c=constants.c, N=100, sigma=1e-20) # units of gamma are s^-1
+    
 
     edges = []          # list of (i, j, rate)
     nodes = -1 # could be any negative number
@@ -142,7 +143,7 @@ def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_ps: float = 10.0):
             elif raw_dG != "":
                 r = rate_from_deltaG(float(raw_dG), beta, k_h)
             elif gamma != "":
-                r = gamma_ps
+                r = gamma_s
             else:
                 raise ValueError("Each row needs either rate or delta_G_eV or gamma value")
 
@@ -162,7 +163,7 @@ def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_ps: float = 10.0):
     for i, j, r in edges:
         A[i, j] += r  
 
-    labels = [f"P{k+1}" for k in range(N)]
+    labels = [f"P{k}" for k in range(N)]
     return A, labels
 
 def make_K_matrix(A: np.ndarray) -> np.ndarray:
@@ -180,27 +181,14 @@ def make_K_matrix(A: np.ndarray) -> np.ndarray:
     return K
 
 def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarray:
-    """
-    Esssentially doing  P(t) = V exp(Λ t) V^{-1} P0. as per previous versions but now in a  
-    slightly better way. (much more memory efficient)
-    Breakdown:
-    - convert the vector P0 into eigenbasis (eigencoordinates)
-    - Then e^eigenvalues * t
-    - Convert back to our original basis 
-    Returns array of shape (len(t_ps), N).
-    """
-    w, V = np.linalg.eig(K)
-    Vinv = np.linalg.inv(V)
-    c0 = Vinv @ P0  # this puts P0 into the eigenbasis
-
-    T = len(t_ps)
-    N = K.shape[0]
-    out = np.zeros((T, N), dtype=float)
-    for k, t in enumerate(t_ps):
-        ew = np.exp(w * t) # no need to regenerate the matrix exponential per timestep
-        Pt = V @ (ew * c0) # converts back into the original basis
-        out[k] = Pt.real
-    return out
+    
+    out = []
+    for i in t_ps:
+        evolve = linalg.expm(K*i) @ P0
+        out.append(evolve)
+    out_array = np.asarray(out)
+    return out_array
+        
 
 def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     """
@@ -209,13 +197,13 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     being the number of columns. (This is a far easier way of doing things than was previously implemented)
     """
     if labels is None:
-        labels = [f"P{i + 1}" for i in range(P_t.shape[1])] # this is a failsafe
+        labels = [f"P{i}" for i in range(P_t.shape[1])] # this is a failsafe
     for i in range(P_t.shape[1]):  # this just indexes each of the columns (rows would have been .shape[0])
         # The x axis is time in picoseconds and will be determined in another function
         # the number of rows in P_t must match the number of time points otherwise the function will not run
         # we then want to iterate over each of the columns 
         plt.plot(t_ps, P_t[:, i], label=labels[i])
-    plt.xlabel("Time (ps)")
+    plt.xlabel("Time in seconds")
     plt.ylabel("Probability")
     plt.legend()
     plt.grid(True) # good to have a grid instead of blank space
@@ -241,7 +229,7 @@ def main():
     P0[0] = 1.0
 
     # Time grid
-    t_ps = np.linspace(0.0, 100.0, 1000)
+    t_ps = np.linspace(0, 1e-5, num=10000)
 
     # Evolve and plot
     P_t = calc_evolution(K, P0, t_ps)
