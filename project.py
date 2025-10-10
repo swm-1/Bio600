@@ -109,17 +109,17 @@ def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, s
    photon_eq = lam_star_m / (h*c)
    integrand = photon_eq * f * A_star
    photons = np.trapezoid(integrand, lam_star)
-   gamma = (N*1e5) * sigma * photons
+   gamma = (N) * sigma * photons
    return gamma
 
-def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_ps: float = 10.0):
+def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_s: float = 1e-11):
     """
     This function loads information about the system.The information is contained within a single 
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
     The output of the function is the weighted A matrix.
     """
     beta = beta_from_T(T_K)
-    k_h = 1.0 / tau_ps  # ps^-1
+    k_h = 1.0 / tau_s  # s^-1
     gamma_s = Gamma(A_calc(),h=constants.h, c=constants.c, N=100, sigma=1e-20) # units of gamma are s^-1
     
 
@@ -220,7 +220,7 @@ def main():
     edges_path = "edges.csv"   # This line depends on the name of CSV file -> would CLI path be better?
 
     # Build A, K
-    A, labels = adjacency_matrix(edges_path, T_K=300.0, tau_ps=10.0)
+    A, labels = adjacency_matrix(edges_path, T_K=300.0, tau_s=1e-11)
     K = make_K_matrix(A)
 
     # Initial condition (one-hot at node 0)
@@ -229,11 +229,11 @@ def main():
     P0[0] = 1.0
 
     # Time grid
-    t_ps = np.linspace(0, 1e-5, num=10000)
+    t_s = np.linspace(0, 1, num=10000)
 
     # Evolve and plot
-    P_t = calc_evolution(K, P0, t_ps)
-    graphing(t_ps, P_t, labels=labels)
+    P_t = calc_evolution(K, P0, t_s)
+    graphing(t_s, P_t, labels=labels)
 
 if __name__ == "__main__":
     main()
