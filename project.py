@@ -41,7 +41,7 @@ def FWHM() -> float:
     fwhm = right - left
     return fwhm
 
-def A_calc() -> np.array:
+def A_calc() -> np.ndarray:
     """
     Small function that calculates A_p(lambda). See below for the equation (maybe at later date include 
     latex code for the formula)
@@ -64,7 +64,7 @@ def A_calc() -> np.array:
     return array_A   
 
 
-def check(A:np.array) -> None:
+def check(A:np.ndarray) -> None:
 
     """
     A_p(lambda) must integrate to have an overall area with 1. A_p(lambda) is dimensionless because it is expressed in nm^-1
@@ -78,13 +78,13 @@ def check(A:np.array) -> None:
 
     if np.isclose(integrated_A, 1.0 , rtol=1e-2) == True:
         print("This is normalized and ready to use")
-        return True
+        return None
     else:
         raise ValueError("The value for A when integrated is not 1")
         
     
 
-def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
+def Gamma(A: np.ndarray, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
    """
    Units:
@@ -109,7 +109,7 @@ def Gamma(A: np.array, h: float=constants.h, c: float=constants.c, N: int=100, s
    photon_eq = lam_star_m / (h*c)
    integrand = photon_eq * f * A_star
    photons = np.trapezoid(integrand, lam_star)
-   gamma = (N) * sigma * photons
+   gamma = float((N) * sigma * photons)
    return gamma
 
 def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_s: float = 1e-11):
