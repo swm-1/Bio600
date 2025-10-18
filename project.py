@@ -210,6 +210,23 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     plt.tight_layout()
     plt.show()
 
+def comparison_plot(t_ps: np.ndarray, P_t: np.ndarray, P_comp_t: np.ndarray, labels=None)-> None:
+    if labels is None:
+        labels = [f"P{i}" for i in range(P_t.shape[1])]
+    labels_comp = [f"Comaprison P{i}" for i in range(P_comp_t.shape[1])]
+    for i in range(P_t.shape[1]):
+        plt.plot(t_ps, P_t[:,i], label=labels[i])
+    
+    for j in range(P_comp_t.shape[1]):
+        plt.plot(t_ps,P_comp_t[:,j], label=labels_comp[j])
+    
+    plt.xlabel("Time in seconds")
+    plt.ylabel("Probability")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 
 def main():
     """
@@ -222,29 +239,37 @@ def main():
     # need to construct a CLI parser for the filepath of the solar spectrum 
     parser = argparse.ArgumentParser(description="specify which filepath you wish to take for the solar spectrum.")
     parser.add_argument("File_name", type=str, help="filepath for the solar spectrum data")
+    parser.add_argument("--comparison", "-c", help="If an additional file is given, a comparison plot will be generated.", action="store_true")
+    parser.add_argument("--comparison_file", "-cf", type=str, help="filepath for the comparison solar spectrum data", default=None)
     args = parser.parse_args()
     
-
-
-
+    
     # Calculate Gamma
     gamma = Gamma(A_calc(),args.File_name,  N=100, sigma=1e-20) # in s^-1
-
     # Build A, K
     A, labels = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
     K = make_K_matrix(A)
-
     # Initial condition -> probability starts on the ground state (node 0)
     N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0
-
     # Time grid
     t_s = np.linspace(0, 1, num=10000)
-
-    # Evolve and plot
+    # Evolve
     P_t = calc_evolution(K, P0, t_s)
-    graphing(t_s, P_t, labels=labels)
+    
+
+    # If user wants a comparison plot
+    if args.comparison and args.comparison_file:
+        gamma_comp = Gamma(A_calc(), args.comparison_file, N=100, sigma=1e-20)
+        A_comp, _ = adjacency_matrix(gamma_comp, edges_path, T_K=300.0, tau_s=1e-11)
+        K_comp = make_K_matrix(A_comp)
+        P_comp_t = calc_evolution(K_comp, P0, t_s)
+        comparison_plot(t_s, P_t, P_comp_t,labels=labels)
+    else:
+        graphing(t_s, P_t, labels=labels)
+
+
 
 if __name__ == "__main__":
     main()
