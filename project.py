@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import csv
 import math
 from scipy import linalg
+import argparse
 
 def beta_from_T(T_K: float) -> float:
     """Return beta = 1/(k_B T) in 1/eV."""
@@ -84,7 +85,7 @@ def check(A:np.ndarray) -> None:
         
     
 
-def Gamma(A: np.ndarray, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
+def Gamma(A: np.ndarray, filepath: str, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
    """
    Units:
@@ -98,7 +99,7 @@ def Gamma(A: np.ndarray, h: float=constants.h, c: float=constants.c, N: int=100,
    """ 
    check(A)
    lam_pig, _ = np.loadtxt("T01.absorption_Qyonly.txt",unpack=True, skiprows=1)
-   lam_star, f = np.loadtxt("5800K.txt", unpack=True)
+   lam_star, f = np.loadtxt(filepath, unpack=True)
 
    lam_pig = np.asarray(lam_pig, dtype=float).ravel()
    lam_star = np.asarray(lam_star, dtype=float).ravel()
@@ -112,17 +113,16 @@ def Gamma(A: np.ndarray, h: float=constants.h, c: float=constants.c, N: int=100,
    gamma = float((N) * sigma * photons)
    return gamma
 
-def adjacency_matrix(edges_csv: str, T_K: float = 300.0, tau_s: float = 1e-11):
+def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: float = 1e-11):
     """
     This function loads information about the system.The information is contained within a single 
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
     The output of the function is the weighted A matrix.
-    """
+    """ 
+
     beta = beta_from_T(T_K)
     k_h = 1.0 / tau_s  # s^-1
-    gamma_s = Gamma(A_calc(),h=constants.h, c=constants.c, N=100, sigma=1e-20) # units of gamma are s^-1
     
-
     edges = []          # list of (i, j, rate)
     nodes = -1 # could be any negative number
 
@@ -199,7 +199,7 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     if labels is None:
         labels = [f"P{i}" for i in range(P_t.shape[1])] # this is a failsafe
     for i in range(P_t.shape[1]):  # this just indexes each of the columns (rows would have been .shape[0])
-        # The x axis is time in picoseconds and will be determined in another function
+        # The x axis is time in seconds and will be determined in another function
         # the number of rows in P_t must match the number of time points otherwise the function will not run
         # we then want to iterate over each of the columns 
         plt.plot(t_ps, P_t[:, i], label=labels[i])
@@ -219,11 +219,22 @@ def main():
     """
     edges_path = "edges.csv"   # This line depends on the name of CSV file -> would CLI path be better?
 
+    # need to construct a CLI parser for the filepath of the solar spectrum 
+    parser = argparse.ArgumentParser(description="specify which filepath you wish to take for the solar spectrum.")
+    parser.add_argument("File_name", type=str, help="filepath for the solar spectrum data")
+    args = parser.parse_args()
+    
+
+
+
+    # Calculate Gamma
+    gamma = Gamma(A_calc(),args.File_name,  N=100, sigma=1e-20) # in s^-1
+
     # Build A, K
-    A, labels = adjacency_matrix(edges_path, T_K=300.0, tau_s=1e-11)
+    A, labels = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
     K = make_K_matrix(A)
 
-    # Initial condition (one-hot at node 0)
+    # Initial condition -> probability starts on the ground state (node 0)
     N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0
