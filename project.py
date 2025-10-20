@@ -15,13 +15,16 @@ def beta_from_T(T_K: float) -> float:
     K_B_eV_per_kelvin = k_B_J_per_kelvin * 6.242e18  # eV/K
     return 1.0 / (K_B_eV_per_kelvin * T_K)
 
-def rate_from_deltaG(delta_G_eV: float, beta: float, k_h: float) -> float:
-    """
-    Detailed balance:
-    - downhill (ΔG <= 0): k = k_h
-    - uphill   (ΔG > 0):  k = k_h * exp(-β ΔG)
-    """
-    return k_h if delta_G_eV <= 0.0 else (k_h * np.exp(-beta * delta_G_eV))
+def reverse_rate(k_f: float, delta_G: float, Beta: float) -> float:
+    '''
+    The purpose of this function is to calculate the reverse rate in a way that satisfies detailed balance.
+    Detailed balance definition:
+    k_r / k_f = exp(-deltaE * beta)
+    '''
+    k_reverse = (k_f * np.exp(-delta_G * Beta))
+    return k_reverse
+
+
 
 def FWHM() -> float:
     """
@@ -128,7 +131,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
 
     with open(edges_csv, 'r', newline="") as f:
         reader = csv.DictReader(f)
-        required = {"donor", "acceptor", "delta_G_eV", "rate"}
+        required = {"donor", "acceptor", "delta_G_eV", "rate", "labels"}
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise ValueError("CSV must have columns: donor, acceptor, delta_G_eV, rate, gamma")
         for row in reader:
@@ -138,14 +141,18 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
             raw_dG   = (row.get("delta_G_eV") or "").strip()
             gamma    = (row.get("gamma") or "").strip()
 
+            # get the forward rate
             if raw_rate != "":
                 r = float(raw_rate)
-            elif raw_dG != "":
-                r = rate_from_deltaG(float(raw_dG), beta, k_h)
+            # this will calculate the reverse rate but is dependant on the forward rate 
+            elif raw_rate and raw_dG != "":
+                r = reverse_rate(float(raw_rate), float(raw_dG), beta)
+            # excitation 
             elif gamma != "":
                 r = gamma_s
             else:
-                raise ValueError("Each row needs either rate or delta_G_eV or gamma value")
+                raise ValueError("You did something wrong")
+
 
             if i == j:
                 raise ValueError(f"Self-loop not allowed at node {i}")
