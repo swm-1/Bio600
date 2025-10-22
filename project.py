@@ -204,13 +204,20 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     being the number of columns. (This is a far easier way of doing things than was previously implemented)
     """
     
+    with open("edges.csv", 'r', newline="") as f:
+        reader = csv.DictReader(f)
+        labels = []
+        for row in reader:
+            j = str((row["labels"]).strip())
+            labels.append(j)
+
     if labels is None:
         labels = [f"P{i}" for i in range(P_t.shape[1])] # this is a failsafe
     for i in range(P_t.shape[1]):  # this just indexes each of the columns (rows would have been .shape[0])
         # The x axis is time in seconds and will be determined in another function
         # the number of rows in P_t must match the number of time points otherwise the function will not run
         # we then want to iterate over each of the columns 
-        plt.plot(t_ps, P_t[:, i], label=labels[i])
+        plt.plot(t_ps, P_t[:, i], label=[f"{labels[i]}"])
     plt.xlabel("Time in seconds")
     plt.ylabel("Probability")
     plt.legend()
