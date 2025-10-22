@@ -140,6 +140,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
             raw_rate = (row.get("rate") or "").strip()
             raw_dG   = (row.get("delta_G_eV") or "").strip()
             gamma    = (row.get("gamma") or "").strip()
+        
 
             # get the forward rate
             if raw_rate != "":
@@ -170,8 +171,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
     for i, j, r in edges:
         A[i, j] += r  
 
-    labels = [f"P{k}" for k in range(N)]
-    return A, labels
+    return A
 
 def make_K_matrix(A: np.ndarray) -> np.ndarray:
     """
@@ -203,6 +203,7 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     the input is an array where each time point corresponds to a new row, with the amount of nodes
     being the number of columns. (This is a far easier way of doing things than was previously implemented)
     """
+    
     if labels is None:
         labels = [f"P{i}" for i in range(P_t.shape[1])] # this is a failsafe
     for i in range(P_t.shape[1]):  # this just indexes each of the columns (rows would have been .shape[0])
@@ -254,7 +255,7 @@ def main():
     # Calculate Gamma
     gamma = Gamma(A_calc(),args.File_name,  N=100, sigma=1e-20) # in s^-1
     # Build A, K
-    A, labels = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
+    A = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
     K = make_K_matrix(A)
     # Initial condition -> probability starts on the ground state (node 0)
     N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
@@ -272,9 +273,9 @@ def main():
         A_comp, _ = adjacency_matrix(gamma_comp, edges_path, T_K=300.0, tau_s=1e-11)
         K_comp = make_K_matrix(A_comp)
         P_comp_t = calc_evolution(K_comp, P0, t_s)
-        comparison_plot(t_s, P_t, P_comp_t,labels=labels)
+        comparison_plot(t_s, P_t, P_comp_t)
     else:
-        graphing(t_s, P_t, labels=labels)
+        graphing(t_s, P_t)
 
 
 
