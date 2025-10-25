@@ -142,15 +142,15 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
             gamma    = (row.get("gamma") or "").strip()
         
 
-            # get the forward rate
-            if raw_rate != "":
-                r = float(raw_rate)
-            # this will calculate the reverse rate but is dependant on the forward rate 
-            elif raw_rate and raw_dG != "":
+            # exitation
+            if gamma != "":
+                r = float(gamma_s)
+            # calculate the backwards rate
+            elif raw_dG and raw_rate != "":
                 r = reverse_rate(float(raw_rate), float(raw_dG), beta)
-            # excitation 
-            elif gamma != "":
-                r = gamma_s
+            # forward rate
+            elif raw_rate != "":
+                r = float(raw_rate)
             else:
                 raise ValueError("You did something wrong")
 
