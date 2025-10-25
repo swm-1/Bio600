@@ -243,6 +243,15 @@ def comparison_plot(t_ps: np.ndarray, P_t: np.ndarray, P_comp_t: np.ndarray, lab
     plt.show()
 
 
+def probability_check(P_t: np.ndarray)-> None:
+    
+    sum_probs = np.sum(P_t, axis= 1)
+    if np.isclose(sum_probs, 1, rtol=1e-2).all():
+        print("probailities are conserved :)")
+        return None
+    else:
+        raise ValueError("Probabilities do not sum to 1")
+
 def main():
     """
      reads edges from 'edges.csv' in the current folder (or change the filename below). 
@@ -272,6 +281,7 @@ def main():
     t_s = np.linspace(0, 1, num=10000)
     # Evolve
     P_t = calc_evolution(K, P0, t_s)
+    probability_check(P_t)
     
 
     # If user wants a comparison plot
