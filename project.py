@@ -282,6 +282,7 @@ def main():
     # Evolve
     P_t = calc_evolution(K, P0, t_s)
     probability_check(P_t)
+    print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
 
     # If user wants a comparison plot
@@ -293,7 +294,7 @@ def main():
         comparison_plot(t_s, P_t, P_comp_t)
     else:
         graphing(t_s, P_t)
-
+             
 
 
 if __name__ == "__main__":
