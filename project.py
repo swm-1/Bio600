@@ -26,14 +26,14 @@ def reverse_rate(k_f: float, delta_G: float, Beta: float) -> float:
 
 
 
-def FWHM() -> float:
+def FWHM(file: str) -> float:
     """
     Calculate the full width half max value. The reason for doing this is so that
     we can calculate w (or the standard deviation in for A_p(lambda))
 
     the file named T01.absorption_Qyonly.txt is data for the Qy absorption band of chlorophyll A.
     """
-    x, y = np.loadtxt("T01.absorption_Qyonly.txt", skiprows=1,unpack=True)
+    x, y = np.loadtxt(file, skiprows=1,unpack=True)
 
     peak = np.argmax(y) # This is for indexing
     # the interpolate function is going to look like this:
@@ -45,13 +45,13 @@ def FWHM() -> float:
     fwhm = right - left
     return fwhm
 
-def A_calc() -> np.ndarray:
+def A_calc(file_path: str) -> np.ndarray:
     """
     Small function that calculates A_p(lambda). See below for the equation (maybe at later date include 
     latex code for the formula)
     """
-    fwhm = FWHM()
-    x, y = np.loadtxt("T01.absorption_Qyonly.txt", skiprows=1,unpack=True)
+    fwhm = FWHM(file_path)
+    x, y = np.loadtxt(file_path, skiprows=1,unpack=True)
     w = fwhm / 2.35482
     peak_y = np.argmax(y)
     peak = x[peak_y]
@@ -68,7 +68,7 @@ def A_calc() -> np.ndarray:
     return array_A   
 
 
-def check(A:np.ndarray) -> None:
+def check(A:np.ndarray,file_path: str) -> None:
 
     """
     A_p(lambda) must integrate to have an overall area with 1. A_p(lambda) is dimensionless because it is expressed in nm^-1
@@ -77,7 +77,7 @@ def check(A:np.ndarray) -> None:
     in the correct manner.
     """
 
-    x, _ = np.loadtxt("T01.absorption_Qyonly.txt",skiprows=1, unpack=True)
+    x, _ = np.loadtxt(file_path, skiprows=1, unpack=True)
     integrated_A = np.trapezoid(A, x)
 
     if np.isclose(integrated_A, 1.0 , rtol=1e-2) == True:
@@ -88,7 +88,7 @@ def check(A:np.ndarray) -> None:
         
     
 
-def Gamma(A: np.ndarray, filepath: str, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
+def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
    """
    Units:
@@ -100,8 +100,8 @@ def Gamma(A: np.ndarray, filepath: str, h: float=constants.h, c: float=constants
     - Number of pigments = dimensionless 
 
    """ 
-   check(A)
-   lam_pig, _ = np.loadtxt("T01.absorption_Qyonly.txt",unpack=True, skiprows=1)
+   check(A, file_path_pig)
+   lam_pig, _ = np.loadtxt(file_path_pig,unpack=True, skiprows=1)
    lam_star, f = np.loadtxt(filepath, unpack=True)
 
    lam_pig = np.asarray(lam_pig, dtype=float).ravel()
@@ -197,14 +197,14 @@ def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarra
     return out_array
         
 
-def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
+def graphing(t_ps: np.ndarray, P_t: np.ndarray, edgefile: str, labels=None) -> None:
     """
     This function graphs the cal_evolution one.
     the input is an array where each time point corresponds to a new row, with the amount of nodes
     being the number of columns. (This is a far easier way of doing things than was previously implemented)
     """
     
-    with open("edges.csv", 'r', newline="") as f:
+    with open( edgefile, 'r', newline="") as f:
         reader = csv.DictReader(f)
         labels = []
         for row in reader:
@@ -222,23 +222,6 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, labels=None) -> None:
     plt.ylabel("Probability")
     plt.legend()
     plt.grid(True) # good to have a grid instead of blank space
-    plt.tight_layout()
-    plt.show()
-
-def comparison_plot(t_ps: np.ndarray, P_t: np.ndarray, P_comp_t: np.ndarray, labels=None)-> None:
-    if labels is None:
-        labels = [f"P{i}" for i in range(P_t.shape[1])]
-    labels_comp = [f"Comaprison P{i}" for i in range(P_comp_t.shape[1])]
-    for i in range(P_t.shape[1]):
-        plt.plot(t_ps, P_t[:,i], label=labels[i])
-    
-    for j in range(P_comp_t.shape[1]):
-        plt.plot(t_ps,P_comp_t[:,j], label=labels_comp[j])
-    
-    plt.xlabel("Time in seconds")
-    plt.ylabel("Probability")
-    plt.legend()
-    plt.grid(True)
     plt.tight_layout()
     plt.show()
 
@@ -260,16 +243,16 @@ def main():
     """
     edges_path = "edges.csv"   # This line depends on the name of CSV file -> would CLI path be better?
 
-    # need to construct a CLI parser for the filepath of the solar spectrum 
+    # need to construct a CLI parser for the filepath of the solar spectrum and pigment absorption spectra
     parser = argparse.ArgumentParser(description="specify which filepath you wish to take for the solar spectrum.")
-    parser.add_argument("File_name", type=str, help="filepath for the solar spectrum data")
-    parser.add_argument("--comparison", "-c", help="If an additional file is given, a comparison plot will be generated.", action="store_true")
-    parser.add_argument("--comparison_file", "-cf", type=str, help="filepath for the comparison solar spectrum data", default=None)
+    parser.add_argument("File_name_star", type=str,nargs='?', help="filepath for the solar spectrum data", default="5800K.txt")
+    parser.add_argument("File_name_pig", type=str, nargs='?', help="provide the filepath for the absorption spectrum of the pigment", default="NCHL252.Qyonly.txt")
     args = parser.parse_args()
     
     
     # Calculate Gamma
-    gamma = Gamma(A_calc(),args.File_name,  N=100, sigma=1e-20) # in s^-1
+    A = A_calc(args.File_name_pig)
+    gamma = Gamma(A,args.File_name_pig,args.File_name_star,  N=100, sigma=1e-20) # in s^-1
     # Build A, K
     A = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
     K = make_K_matrix(A)
@@ -282,18 +265,10 @@ def main():
     # Evolve
     P_t = calc_evolution(K, P0, t_s)
     probability_check(P_t)
+    print(f"the rate of excitation is {gamma} per second")
     print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
-
-    # If user wants a comparison plot
-    if args.comparison and args.comparison_file:
-        gamma_comp = Gamma(A_calc(), args.comparison_file, N=100, sigma=1e-20)
-        A_comp, _ = adjacency_matrix(gamma_comp, edges_path, T_K=300.0, tau_s=1e-11)
-        K_comp = make_K_matrix(A_comp)
-        P_comp_t = calc_evolution(K_comp, P0, t_s)
-        comparison_plot(t_s, P_t, P_comp_t)
-    else:
-        graphing(t_s, P_t)
+    graphing(t_s, P_t, edges_path)
              
 
 
