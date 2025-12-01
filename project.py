@@ -116,7 +116,7 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    gamma = float((N) * sigma * photons)
    return gamma
 
-def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: float = 1e-11):
+def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
     """
     This function loads information about the system.The information is contained within a single 
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
@@ -124,7 +124,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
     """ 
 
     beta = beta_from_T(T_K)
-    k_h = 1.0 / tau_s  # s^-1
+    
     
     edges = []          # list of (i, j, rate)
     nodes = -1 # could be any negative number
@@ -174,7 +174,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0, tau_s: 
     return A
 
 def make_K_matrix(A: np.ndarray) -> np.ndarray:
-    """
+    """/home/sea/Desktop/Bio600/absorption_spectras/Chla.absorption.txt
     Getting K from A:
     - First take the transpose this shows the influx to each node.
     - Then to calculate the outflow take the sums of each of the rows and place 
@@ -234,6 +234,7 @@ def probability_check(P_t: np.ndarray)-> None:
         return None
     else:
         raise ValueError("Probabilities do not sum to 1")
+    
 
 def main():
     """
@@ -244,24 +245,25 @@ def main():
     edges_path = "edges.csv"   # This line depends on the name of CSV file -> would CLI path be better?
 
     # need to construct a CLI parser for the filepath of the solar spectrum and pigment absorption spectra
-    parser = argparse.ArgumentParser(description="specify which filepath you wish to take for the solar spectrum.")
+    parser = argparse.ArgumentParser(description="Variables that can change in the file (maybe a better description is needed).")
     parser.add_argument("File_name_star", type=str,nargs='?', help="filepath for the solar spectrum data", default="5800K.txt")
-    parser.add_argument("File_name_pig", type=str, nargs='?', help="provide the filepath for the absorption spectrum of the pigment", default="NCHL252.Qyonly.txt")
+    parser.add_argument("File_name_pig", type=str, nargs='?', help="provide the filepath for the absorption spectrum of the pigment", default="NCHL261(bchla_Qy).absorption.txt")
+    parser.add_argument('-s','--sigma', help='input what value the absorption cross-section is.', type=float, nargs='?', default= 1e-20)
     args = parser.parse_args()
     
     
     # Calculate Gamma
     A = A_calc(args.File_name_pig)
-    gamma = Gamma(A,args.File_name_pig,args.File_name_star,  N=100, sigma=1e-20) # in s^-1
+    gamma = Gamma(A,args.File_name_pig,args.File_name_star,  N=100, sigma=args.sigma) # in s^-1
     # Build A, K
-    A = adjacency_matrix(gamma, edges_path, T_K=300.0, tau_s=1e-11)
+    A = adjacency_matrix(gamma, edges_path, T_K=300.0)
     K = make_K_matrix(A)
     # Initial condition -> probability starts on the ground state (node 0)
     N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0
     # Time grid
-    t_s = np.linspace(0, 1, num=10000)
+    t_s = np.linspace(0, 0.1, num=10000)
     # Evolve
     P_t = calc_evolution(K, P0, t_s)
     probability_check(P_t)
