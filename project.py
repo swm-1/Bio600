@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import Dict, Tuple, Optional
 from scipy import constants
 import matplotlib.pyplot as plt
 import csv
@@ -116,7 +117,8 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    gamma = float((N) * sigma * photons)
    return gamma
 
-def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
+def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0
+                     , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None):
     """
     This function loads information about the system.The information is contained within a single 
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
@@ -138,6 +140,13 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
             raw_rate = (row.get("rate") or "").strip()
             KBT   = (row.get("KBT") or "").strip()
             gamma    = (row.get("gamma") or "").strip()
+
+            # This will allow us to sweep through values of KBT and essentially 
+            # ignore the value of KBT in the CSV file
+            if KBT_switcher is not None:
+                key = (i,j)  # define which edge we care about
+                if key in KBT_switcher:
+                    KBT = str(KBT_switcher[key]) 
         
 
             # exitation
@@ -223,6 +232,86 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, edgefile: str, labels=None) -> N
     plt.tight_layout()
     plt.show()
 
+def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
+                               edges_path: str,   t_s: np.ndarray, P0: np.ndarray) -> float:
+    """
+    This function will return the electron output for a given edge or iteration of an edge. This is crucial for the heat map as this is what
+    we are using as the fitness (not sure that is the correct word)
+    """
+    A = adjacency_matrix(
+        gamma_s=gamma,
+        edges_csv=edges_path,
+        T_K=300.0,
+        KBT_switcher=KBT_switcher
+        )
+   
+    K = make_K_matrix(A)
+
+    P_t = calc_evolution(K, P0, t_s)
+
+    electron_output = P_t[-1, -1] * 1e3 # The rate can perhaps not be hardcoded in the future?
+    return electron_output
+
+
+def graphing_heat_map (  edges_path: str, gamma: float, group_A_edges: list[tuple[int, int]],
+                       group_B_edges: list[tuple[int, int]],KBT_A_values: np.ndarray,KBT_B_values: np.ndarray) -> None:
+    """
+    This is the function where we are going to be producing the heat map. The namings and this docstrig also need to be updated
+    """
+    A_for_size = adjacency_matrix(gamma, edges_path, T_K=300.0)
+    N = A_for_size.shape[0]
+
+    P0 = np.zeros(N, dtype=float)
+    P0[0] = 1.0
+
+    t_s = np.linspace(0, 1, num=1000)
+
+    # 2. Allocate 2D array for fitness values
+    Z = np.zeros((len(KBT_B_values), len(KBT_A_values)), dtype=float)
+
+    # 3. Double loop over parameter grid
+    for i, kbt_B in enumerate(KBT_B_values):      # y-axis
+        for j, kbt_A in enumerate(KBT_A_values):  # x-axis
+
+            overrides: dict[tuple[int, int], float] = {}
+
+            # Set KBT for all edges in group A
+            for edge in group_A_edges:
+                overrides[edge] = kbt_A
+
+            # Set KBT for all edges in group B
+            for edge in group_B_edges:
+                overrides[edge] = kbt_B
+
+            # Now compute fitness for this combination
+            fitness = electron_out_put_for_heat(
+                KBT_switcher=overrides,
+                gamma=gamma,
+                edges_path=edges_path,
+                t_s=t_s,
+                P0=P0,
+            )
+            Z[i, j] = fitness
+
+    # 4. Plot heatmap
+    plt.figure()
+    plt.imshow(
+        Z,
+        origin="lower",
+        extent =(
+            float(KBT_A_values[0]), float(KBT_A_values[-1]),
+            float(KBT_B_values[0]), float(KBT_B_values[-1])
+        ),
+        aspect="auto",
+    )
+    plt.colorbar(label="Electron output (arb. units)")
+    plt.xlabel("KBT_A (group A edges) [ΔE/kBT]")
+    plt.ylabel("KBT_B (group B edges) [ΔE/kBT]")
+    plt.title("RC fitness landscape with grouped energy gaps")
+    plt.tight_layout()
+    plt.show()
+
+
 
 def probability_check(P_t: np.ndarray)-> None:
     
@@ -268,7 +357,24 @@ def main():
     print(f"the rate of excitation is {gamma} per second")
     print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
-    graphing(t_s, P_t, edges_path)
+    #graphing(t_s, P_t, edges_path)
+    group_cs_r = [
+        (2,1),
+        (5,3)
+    ]
+
+    group_other = [
+        (3,2),
+        (4,2),
+        (5,4)
+    ]
+
+    KBT_A_values = np.linspace(0.0, 20.0, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_B_values = np.linspace(0.0, 20.0, 50)  # other gap(s) from 0 → 20 kBT
+
+    graphing_heat_map (edges_path=edges_path, gamma=gamma, group_A_edges=group_cs_r,
+                       group_B_edges=group_other,KBT_A_values=KBT_A_values,KBT_B_values=KBT_B_values,
+    )
              
 
 
