@@ -15,13 +15,13 @@ def beta_from_T(T_K: float) -> float:
     K_B_eV_per_kelvin = k_B_J_per_kelvin * 6.242e18  # eV/K
     return 1.0 / (K_B_eV_per_kelvin * T_K)
 
-def reverse_rate(k_f: float, delta_G: float, Beta: float) -> float:
+def reverse_rate(k_f: float, KBT: float, Beta: float) -> float:
     '''
     The purpose of this function is to calculate the reverse rate in a way that satisfies detailed balance.
     Detailed balance definition:
     k_r / k_f = exp(-deltaE * beta)
     '''
-    k_reverse = (k_f * np.exp(-delta_G * Beta))
+    k_reverse = (k_f * np.exp(-KBT))
     return k_reverse
 
 
@@ -131,14 +131,14 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
 
     with open(edges_csv, 'r', newline="") as f:
         reader = csv.DictReader(f)
-        required = {"donor", "acceptor", "delta_G_eV", "rate", "labels"}
+        required = {"donor", "acceptor", "KBT", "rate", "labels"}
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
-            raise ValueError("CSV must have columns: donor, acceptor, delta_G_eV, rate, gamma")
+            raise ValueError("CSV must have columns: donor, acceptor, KBT, rate, gamma")
         for row in reader:
             i = int((row["donor"]).strip())
             j = int((row["acceptor"]).strip())
             raw_rate = (row.get("rate") or "").strip()
-            raw_dG   = (row.get("delta_G_eV") or "").strip()
+            KBT   = (row.get("KBT") or "").strip()
             gamma    = (row.get("gamma") or "").strip()
         
 
@@ -146,8 +146,8 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
             if gamma != "":
                 r = float(gamma_s)
             # calculate the backwards rate
-            elif raw_dG and raw_rate != "":
-                r = reverse_rate(float(raw_rate), float(raw_dG), beta)
+            elif KBT and raw_rate != "":
+                r = reverse_rate(float(raw_rate), float(KBT), beta)
             # forward rate
             elif raw_rate != "":
                 r = float(raw_rate)
@@ -263,7 +263,7 @@ def main():
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0
     # Time grid
-    t_s = np.linspace(0, 0.1, num=10000)
+    t_s = np.linspace(0, 1, num=10000)
     # Evolve
     P_t = calc_evolution(K, P0, t_s)
     probability_check(P_t)
