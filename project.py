@@ -15,7 +15,7 @@ def beta_from_T(T_K: float) -> float:
     K_B_eV_per_kelvin = k_B_J_per_kelvin * 6.242e18  # eV/K
     return 1.0 / (K_B_eV_per_kelvin * T_K)
 
-def reverse_rate(k_f: float, KBT: float, Beta: float) -> float:
+def reverse_rate(k_f: float, KBT: float) -> float:
     '''
     The purpose of this function is to calculate the reverse rate in a way that satisfies detailed balance.
     Detailed balance definition:
@@ -122,8 +122,6 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
     The output of the function is the weighted A matrix.
     """ 
-
-    beta = beta_from_T(T_K)
     
     
     edges = []          # list of (i, j, rate)
@@ -147,7 +145,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0):
                 r = float(gamma_s)
             # calculate the backwards rate
             elif KBT and raw_rate != "":
-                r = reverse_rate(float(raw_rate), float(KBT), beta)
+                r = reverse_rate(float(raw_rate), float(KBT))
             # forward rate
             elif raw_rate != "":
                 r = float(raw_rate)
