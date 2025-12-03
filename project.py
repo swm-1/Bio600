@@ -253,8 +253,8 @@ def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], floa
     return electron_output
 
 
-def graphing_heat_map (  edges_path: str, gamma: float, group_A_edges: list[tuple[int, int]],
-                       group_B_edges: list[tuple[int, int]],KBT_A_values: np.ndarray,KBT_B_values: np.ndarray) -> None:
+def graphing_heat_map (  edges_path: str, gamma: float, group_CS_R_edges: list[tuple[int, int]],
+                       group_oxidation_edges: list[tuple[int, int]],KBT_CS_R_values: np.ndarray,KBT_oxidation_values: np.ndarray) -> None:
     """
     This is the function where we are going to be producing the heat map. The namings and this docstrig also need to be updated
     """
@@ -267,20 +267,20 @@ def graphing_heat_map (  edges_path: str, gamma: float, group_A_edges: list[tupl
     t_s = np.linspace(0, 1, num=1000)
 
     # 2. Allocate 2D array for fitness values
-    Z = np.zeros((len(KBT_B_values), len(KBT_A_values)), dtype=float)
+    Z = np.zeros((len(KBT_CS_R_values), len(KBT_oxidation_values)), dtype=float)
 
     # 3. Double loop over parameter grid
-    for i, kbt_B in enumerate(KBT_B_values):      # y-axis
-        for j, kbt_A in enumerate(KBT_A_values):  # x-axis
+    for i, kbt_B in enumerate(KBT_CS_R_values):      # y-axis
+        for j, kbt_A in enumerate(KBT_oxidation_values):  # x-axis
 
             overrides: dict[tuple[int, int], float] = {}
 
             # Set KBT for all edges in group A
-            for edge in group_A_edges:
+            for edge in group_CS_R_edges:
                 overrides[edge] = kbt_A
 
             # Set KBT for all edges in group B
-            for edge in group_B_edges:
+            for edge in group_oxidation_edges:
                 overrides[edge] = kbt_B
 
             # Now compute fitness for this combination
@@ -299,15 +299,15 @@ def graphing_heat_map (  edges_path: str, gamma: float, group_A_edges: list[tupl
         Z,
         origin="lower",
         extent =(
-            float(KBT_A_values[0]), float(KBT_A_values[-1]),
-            float(KBT_B_values[0]), float(KBT_B_values[-1])
+            float(KBT_oxidation_values[0]), float(KBT_oxidation_values[-1]),
+            float(KBT_CS_R_values[0]), float(KBT_CS_R_values[-1])
         ),
         aspect="auto",
     )
     plt.colorbar(label="Electron output (arb. units)")
-    plt.xlabel("KBT_A (group A edges) [ΔE/kBT]")
-    plt.ylabel("KBT_B (group B edges) [ΔE/kBT]")
-    plt.title("RC fitness landscape with grouped energy gaps")
+    plt.xlabel("ΔEox (in KBT)")
+    plt.ylabel("ΔE (in KBT)")
+    plt.title("Optimal energy gaps for a simple anoxygenic photosystem")
     plt.tight_layout()
     plt.show()
 
@@ -358,22 +358,23 @@ def main():
     print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
     #graphing(t_s, P_t, edges_path)
-    group_cs_r = [
+    cs_r = [
         (2,1),
-        (5,3)
-    ]
-
-    group_other = [
         (3,2),
-        (4,2),
         (5,4)
     ]
 
-    KBT_A_values = np.linspace(0.0, 20.0, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_B_values = np.linspace(0.0, 20.0, 50)  # other gap(s) from 0 → 20 kBT
+    oxidation = [
+        (4,2),
+        (5,3)
+        
+    ]
 
-    graphing_heat_map (edges_path=edges_path, gamma=gamma, group_A_edges=group_cs_r,
-                       group_B_edges=group_other,KBT_A_values=KBT_A_values,KBT_B_values=KBT_B_values,
+    KBT_CSandR_values = np.linspace(0.0, 20.0, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_oxidation_values = np.linspace(0.0, 20.0, 50)  # oxidation energy gap(s) from 0 → 20 kBT
+
+    graphing_heat_map (edges_path=edges_path, gamma=gamma, group_CS_R_edges=cs_r,
+                       group_oxidation_edges=oxidation,KBT_CS_R_values=KBT_CSandR_values,KBT_oxidation_values=KBT_oxidation_values,
     )
              
 
