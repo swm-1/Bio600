@@ -118,11 +118,11 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    return gamma
 
 def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0
-                     , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None):
+                     , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None) -> np.ndarray:
     """
     This function loads information about the system.The information is contained within a single 
     CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
-    The output of the function is the weighted A matrix.
+    The output of the function is the weighted A (Adjacency) matrix.
     """ 
     
     
@@ -264,34 +264,34 @@ def graphing_heat_map (  edges_path: str, gamma: float, group_CS_R_edges: list[t
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0
 
-    t_s = np.linspace(0, 1, num=1000)
+    t_s = np.linspace(0, 10, num=1000)
 
     # 2. Allocate 2D array for fitness values
     Z = np.zeros((len(KBT_CS_R_values), len(KBT_oxidation_values)), dtype=float)
 
     # 3. Double loop over parameter grid
-    for i, kbt_B in enumerate(KBT_CS_R_values):      # y-axis
-        for j, kbt_A in enumerate(KBT_oxidation_values):  # x-axis
+    for i, kbt_CS_R in enumerate(KBT_CS_R_values):      # y-axis
+        for j, kbt_ox in enumerate(KBT_oxidation_values):  # x-axis
 
             overrides: dict[tuple[int, int], float] = {}
 
             # Set KBT for all edges in group A
             for edge in group_CS_R_edges:
-                overrides[edge] = kbt_A
+                overrides[edge] = kbt_CS_R
 
             # Set KBT for all edges in group B
             for edge in group_oxidation_edges:
-                overrides[edge] = kbt_B
+                overrides[edge] = kbt_ox
 
             # Now compute fitness for this combination
-            fitness = electron_out_put_for_heat(
+            electron_output = electron_out_put_for_heat(
                 KBT_switcher=overrides,
                 gamma=gamma,
                 edges_path=edges_path,
                 t_s=t_s,
                 P0=P0,
             )
-            Z[i, j] = fitness
+            Z[i, j] = electron_output
 
     # 4. Plot heatmap
     plt.figure()
@@ -352,10 +352,10 @@ def main():
     # Time grid
     t_s = np.linspace(0, 1, num=10000)
     # Evolve
-    P_t = calc_evolution(K, P0, t_s)
-    probability_check(P_t)
-    print(f"the rate of excitation is {gamma} per second")
-    print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
+    #P_t = calc_evolution(K, P0, t_s)
+    #probability_check(P_t)
+    #print(f"the rate of excitation is {gamma} per second")
+    #print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
     #graphing(t_s, P_t, edges_path)
     cs_r = [
@@ -370,8 +370,8 @@ def main():
         
     ]
 
-    KBT_CSandR_values = np.linspace(0.0, 20.0, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_oxidation_values = np.linspace(0.0, 20.0, 50)  # oxidation energy gap(s) from 0 → 20 kBT
+    KBT_CSandR_values = np.linspace(0.0, 15, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_oxidation_values = np.linspace(0.0, 15, 50)  # oxidation energy gap(s) from 0 → 20 kBT
 
     graphing_heat_map (edges_path=edges_path, gamma=gamma, group_CS_R_edges=cs_r,
                        group_oxidation_edges=oxidation,KBT_CS_R_values=KBT_CSandR_values,KBT_oxidation_values=KBT_oxidation_values,
