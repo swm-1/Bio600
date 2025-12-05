@@ -10,11 +10,13 @@ import math
 from scipy import linalg
 import argparse
 
+
 def beta_from_T(T_K: float) -> float:
     """Return beta = 1/(k_B T) in 1/eV."""
     k_B_J_per_kelvin = constants.Boltzmann      # J/K
     K_B_eV_per_kelvin = k_B_J_per_kelvin * 6.242e18  # eV/K
     return 1.0 / (K_B_eV_per_kelvin * T_K)
+
 
 def reverse_rate(k_f: float, KBT: float) -> float:
     '''
@@ -24,7 +26,6 @@ def reverse_rate(k_f: float, KBT: float) -> float:
     '''
     k_reverse = (k_f * np.exp(-KBT))
     return k_reverse
-
 
 
 def FWHM(file: str) -> float:
@@ -45,6 +46,7 @@ def FWHM(file: str) -> float:
 
     fwhm = right - left
     return fwhm
+
 
 def A_calc(file_path: str) -> np.ndarray:
     """
@@ -87,7 +89,6 @@ def check(A:np.ndarray,file_path: str) -> None:
     else:
         raise ValueError("The value for A when integrated is not 1")
         
-    
 
 def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h, c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
@@ -116,6 +117,7 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    photons = np.trapezoid(integrand, lam_star)
    gamma = float((N) * sigma * photons)
    return gamma
+
 
 def adjacency_matrix(gamma_s: float, edges_csv: str
                      , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None) -> np.ndarray:
@@ -180,6 +182,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str
 
     return A
 
+
 def make_K_matrix(A: np.ndarray) -> np.ndarray:
     """
     Getting K from A:
@@ -194,6 +197,7 @@ def make_K_matrix(A: np.ndarray) -> np.ndarray:
     K = K_influx - K_out
     return K
 
+
 def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarray:
     
     out = []
@@ -202,33 +206,16 @@ def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarra
         out.append(evolve)
     out_array = np.asarray(out)
     return out_array
+
+
+def probability_check(P_t: np.ndarray)-> None:
+    
+    sum_probs = np.sum(P_t, axis= 1)
+    if np.isclose(sum_probs, 1, rtol=1e-2).all():
+        return None
+    else:
+        raise ValueError("Probabilities do not sum to 1")
         
-
-def graphing(t_ps: np.ndarray, P_t: np.ndarray, edgefile: str, labels=None) -> None:
-    """
-    
-    """
-    
-    with open( edgefile, 'r', newline="") as f:
-        reader = csv.DictReader(f)
-        labels = []
-        for row in reader:
-            j = str((row["labels"]).strip())
-            labels.append(j)
-
-    if labels is None:
-        labels = [f"P{i}" for i in range(P_t.shape[1])] # this is a failsafe
-    for i in range(P_t.shape[1]):  # this just indexes each of the columns (rows would have been .shape[0])
-        # The x axis is time in seconds and will be determined in another function
-        # the number of rows in P_t must match the number of time points otherwise the function will not run
-        # we then want to iterate over each of the columns 
-        plt.plot(t_ps, P_t[:, i], label=[f"{labels[i]}"])
-    plt.xlabel("Time in seconds")
-    plt.ylabel("Probability")
-    plt.legend()
-    plt.grid(True) # good to have a grid instead of blank space
-    plt.tight_layout()
-    plt.show()
 
 def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
                                edges_path: str,   t_s: np.ndarray, P0: np.ndarray) -> float:
@@ -259,6 +246,7 @@ def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], floa
     K = make_K_matrix(A)
 
     P_t = calc_evolution(K, P0, t_s)
+    probability_check(P_t=P_t)
 
     electron_output = P_t[-1, -1] * 1e3 # The rate can perhaps not be hardcoded in the future?
     return electron_output
@@ -342,17 +330,6 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     plt.title("Optimal energy gaps for a simple anoxygenic photosystem")
     plt.tight_layout()
     plt.show()
-
-
-
-def probability_check(P_t: np.ndarray)-> None:
-    
-    sum_probs = np.sum(P_t, axis= 1)
-    if np.isclose(sum_probs, 1, rtol=1e-2).all():
-        print("probailities are conserved :)")
-        return None
-    else:
-        raise ValueError("Probabilities do not sum to 1")
     
 
 def main():
@@ -374,22 +351,7 @@ def main():
     # Calculate Gamma
     A = A_calc(args.File_name_pig)
     gamma = Gamma(A,args.File_name_pig,args.File_name_star,  N=100, sigma=args.sigma) # in s^-1
-    # Build A, K
-    A = adjacency_matrix(gamma, edges_path)
-    K = make_K_matrix(A)
-    # Initial condition -> probability starts on the ground state (node 0)
-    N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
-    P0 = np.zeros(N, dtype=float)
-    P0[0] = 1.0
-    # Time grid
-    t_s = np.linspace(0, 1, num=10000)
-    # Evolve
-    #P_t = calc_evolution(K, P0, t_s)
-    #probability_check(P_t)
-    #print(f"the rate of excitation is {gamma} per second")
-    #print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
-    
-    #graphing(t_s, P_t, edges_path)
+
     non_delta_E_ox_edges: list = [
         (2,1),
         (3,2),
