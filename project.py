@@ -117,7 +117,7 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    gamma = float((N) * sigma * photons)
    return gamma
 
-def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0
+def adjacency_matrix(gamma_s: float, edges_csv: str
                      , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None) -> np.ndarray:
     """
     This function loads information about the system.The information is contained within a single 
@@ -181,7 +181,7 @@ def adjacency_matrix(gamma_s: float, edges_csv: str, T_K: float = 300.0
     return A
 
 def make_K_matrix(A: np.ndarray) -> np.ndarray:
-    """/home/sea/Desktop/Bio600/absorption_spectras/Chla.absorption.txt
+    """
     Getting K from A:
     - First take the transpose this shows the influx to each node.
     - Then to calculate the outflow take the sums of each of the rows and place 
@@ -206,9 +206,7 @@ def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarra
 
 def graphing(t_ps: np.ndarray, P_t: np.ndarray, edgefile: str, labels=None) -> None:
     """
-    This function graphs the cal_evolution one.
-    the input is an array where each time point corresponds to a new row, with the amount of nodes
-    being the number of columns. (This is a far easier way of doing things than was previously implemented)
+    
     """
     
     with open( edgefile, 'r', newline="") as f:
@@ -235,13 +233,26 @@ def graphing(t_ps: np.ndarray, P_t: np.ndarray, edgefile: str, labels=None) -> N
 def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
                                edges_path: str,   t_s: np.ndarray, P0: np.ndarray) -> float:
     """
-    This function will return the electron output for a given edge or iteration of an edge. This is crucial for the heat map as this is what
-    we are using as the fitness (not sure that is the correct word)
+    Function parameters:
+        - KBT_switcher -> This parameter is a dictionary and will override the KBT values that are found within the CSV file.
+                          The only real information needed to produce this dictionary is the lists of edges that we care about. 
+                          For the sake of ease it should be kept to two seperate groups of edges and these can be contained within 
+                          seperate lists (ΔE & ΔE_ox).
+        - gamma        -> This is the manual calculation for the reat of excitation.
+        - edges_path   -> This is the file path for the edges.csv or any CSV file that contains correctly formatted information about
+                          the system.
+        - t_s          -> This parameter is just a 1-D array that provides how long of a timespan the calculation should be run for.
+        - P0           -> This is just the initial probability vector.
+
+    Returns:
+        The function should return the electron output for a given set of conditions.
+
+    Notes:
+        This function should be pretty self explanitory.
     """
     A = adjacency_matrix(
         gamma_s=gamma,
         edges_csv=edges_path,
-        T_K=300.0,
         KBT_switcher=KBT_switcher
         )
    
@@ -253,37 +264,58 @@ def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], floa
     return electron_output
 
 
-def graphing_heat_map (  edges_path: str, gamma: float, group_CS_R_edges: list[tuple[int, int]],
-                       group_oxidation_edges: list[tuple[int, int]],KBT_CS_R_values: np.ndarray,KBT_oxidation_values: np.ndarray) -> None:
+def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tuple[int, int]],
+                       delta_E_ox_edges: list[tuple[int, int]],KBT_delta_E_values: np.ndarray,KBT_delta_E_ox_values: np.ndarray) -> None:
     """
-    This is the function where we are going to be producing the heat map. The namings and this docstrig also need to be updated
+    The purpose of this function is to output a heat map that corresponds to the electron output at varying values of KBT.
+
+    Function parameters:
+    
+    - edges_path      -> this is the csv file where all of the information about the system we are modelling is contained.
+    - Gamma           -> The calculation for the rate of excitation, but currently this is not being used.
+    - delta_E_edges   -> This parameter corresponds to all of the edges that encode ΔE_CS and ΔE_r. The reason that these two have been grouped
+                         together is because they are equal (ΔE_CS = ΔE_r). This parameter must be passed as a list of the edges.
+    -delta_E_ox_edges -> This parameter is esentially the same as the one above. The only difference is that the edges contained
+                         correspond to ΔE_ox. 
+    (A quick thing to note about the above parameters (detla_E_ox_edges and delta_E_edges) these can be changed depending on desired outcome 
+    of the function. i.e. they need not just represent ΔE_ox or ΔE.)
+   
+    - KBT_delta_E_values & KBT_delta_E_ox_values -> these two parameters should be the same. They are a 1-D array of values. This is 
+                                                    the range of KBT values you wish to evaluate 
+    
+    Returns:
+        The function in and of itself does not return anything, the whole purpose of it is to generate a heat map.
+                                                
     """
-    A_for_size = adjacency_matrix(gamma, edges_path, T_K=300.0)
+    
+    # this array does not really do anything, it is just needed to get the correct number of rows for the 
+    # intial probability vector
+    A_for_size = adjacency_matrix(gamma, edges_path)
     N = A_for_size.shape[0]
-
+    # initial probability vector
     P0 = np.zeros(N, dtype=float)
-    P0[0] = 1.0
-
+    P0[0] = 1.0 
+    # this is the time that the calculation will be run for
     t_s = np.linspace(0, 10, num=1000)
 
-    # 2. Allocate 2D array for fitness values
-    Z = np.zeros((len(KBT_CS_R_values), len(KBT_oxidation_values)), dtype=float)
+    # Create an array to store the calculated electron outputs in
+    Z = np.zeros((len(KBT_delta_E_values), len(KBT_delta_E_ox_values)), dtype=float)
 
-    # 3. Double loop over parameter grid
-    for i, kbt_CS_R in enumerate(KBT_CS_R_values):      # y-axis
-        for j, kbt_ox in enumerate(KBT_oxidation_values):  # x-axis
+    # Double loop over parameter grid
+    for i, kbt_CS_R in enumerate(KBT_delta_E_values):      # y-axis because axis 0 - corresponds to the rows
+        for j, kbt_ox in enumerate(KBT_delta_E_ox_values):  # x-axis because axis 1 - correpsponds to the coloumns of a matrix.
 
             overrides: dict[tuple[int, int], float] = {}
 
             # Set KBT for all edges in group A
-            for edge in group_CS_R_edges:
+            for edge in delta_E_edges:
                 overrides[edge] = kbt_CS_R
 
             # Set KBT for all edges in group B
-            for edge in group_oxidation_edges:
+            for edge in delta_E_ox_edges:
                 overrides[edge] = kbt_ox
 
-            # Now compute fitness for this combination
+            # Now compute electron output for this combination
             electron_output = electron_out_put_for_heat(
                 KBT_switcher=overrides,
                 gamma=gamma,
@@ -299,8 +331,8 @@ def graphing_heat_map (  edges_path: str, gamma: float, group_CS_R_edges: list[t
         Z,
         origin="lower",
         extent =(
-            float(KBT_oxidation_values[0]), float(KBT_oxidation_values[-1]),
-            float(KBT_CS_R_values[0]), float(KBT_CS_R_values[-1])
+            float(KBT_delta_E_ox_values[0]), float(KBT_delta_E_ox_values[-1]),
+            float(KBT_delta_E_values[0]), float(KBT_delta_E_values[-1])
         ),
         aspect="auto",
     )
@@ -343,7 +375,7 @@ def main():
     A = A_calc(args.File_name_pig)
     gamma = Gamma(A,args.File_name_pig,args.File_name_star,  N=100, sigma=args.sigma) # in s^-1
     # Build A, K
-    A = adjacency_matrix(gamma, edges_path, T_K=300.0)
+    A = adjacency_matrix(gamma, edges_path)
     K = make_K_matrix(A)
     # Initial condition -> probability starts on the ground state (node 0)
     N = A.shape[0] # number of rows of A so we can think of this as the number of nodes
@@ -358,23 +390,23 @@ def main():
     #print(f"average electron output is {P_t[-1,-1] * 1e3}") # last entry of P_t matrix which is the final P value of the final node
     
     #graphing(t_s, P_t, edges_path)
-    cs_r = [
+    non_delta_E_ox_edges: list = [
         (2,1),
         (3,2),
         (5,4)
     ]
 
-    oxidation = [
+    oxidation_edges: list = [
         (4,2),
         (5,3)
         
     ]
 
-    KBT_CSandR_values = np.linspace(0.0, 15, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_oxidation_values = np.linspace(0.0, 15, 50)  # oxidation energy gap(s) from 0 → 20 kBT
+    KBT_non_ox_values = np.linspace(0.0, 15, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_ox_values = np.linspace(0.0, 15, 50)  # oxidation energy gap(s) from 0 → 20 kBT
 
-    graphing_heat_map (edges_path=edges_path, gamma=gamma, group_CS_R_edges=cs_r,
-                       group_oxidation_edges=oxidation,KBT_CS_R_values=KBT_CSandR_values,KBT_oxidation_values=KBT_oxidation_values,
+    graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_delta_E_ox_edges,
+                       delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
     )
              
 
