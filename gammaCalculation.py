@@ -66,13 +66,12 @@ def check(A:np.ndarray,file_path: str) -> None:
     integrated_A = np.trapezoid(A, x)
 
     if np.isclose(integrated_A, 1.0 , rtol=1e-2) == True:
-        print("This is normalized and ready to use")
         return None
     else:
         raise ValueError("The value for A when integrated is not 1")
 
 
-def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h, 
+def putEveryThingTogether(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h, 
           c: float=constants.c, N: int=100, sigma: float=1e-20) -> float: 
     
    """
@@ -100,3 +99,10 @@ def Gamma(A: np.ndarray,file_path_pig: str,  filepath: str, h: float=constants.h
    photons = np.trapezoid(integrand, lam_star)
    gamma = float((N) * sigma * photons)
    return gamma
+
+def Gamma(file_path_pigment: str, file_path_star: str) -> float:
+
+    A=A_calc(file_path=file_path_pigment)
+    gamma = putEveryThingTogether(A=A, file_path_pig=file_path_pigment,
+                                  filepath=file_path_star)
+    return gamma
