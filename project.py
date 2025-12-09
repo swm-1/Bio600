@@ -126,7 +126,7 @@ def probability_check(P_t: np.ndarray)-> None:
         raise ValueError("Probabilities do not sum to 1")
         
 
-def electron_out_put_for_heat (KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
+def electron_out_put_for_heat(KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
                                edges_path: str,   t_s: np.ndarray, P0: np.ndarray) -> float:
     """
     Function parameters:
@@ -231,7 +231,7 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
             float(KBT_delta_E_ox_values[0]), float(KBT_delta_E_ox_values[-1]),
             float(KBT_delta_E_values[0]), float(KBT_delta_E_values[-1])
         ),
-        aspect="auto",
+        aspect="auto"
     )
     plt.colorbar(label="Electron output (arb. units)")
     plt.xlabel("ΔEox (in KBT)")
@@ -239,6 +239,37 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     plt.title("Optimal energy gaps for a simple anoxygenic photosystem")
     plt.tight_layout()
     plt.show()
+
+def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]], 
+                        gamma: float, delta_E_values: np.ndarray):
+    """
+    I should write a docstring
+    """
+
+    A_for_size = adjacency_matrix(gamma_s=gamma,edges_csv=edges_path)
+    N = A_for_size.shape[0]
+    P0=np.zeros(N,dtype=float)
+    P0[0] = 1.0
+    t_s = np.linspace(0,10,num=1000)
+
+    overrides = {}
+    output = []
+    for kbt in delta_E_values:
+        for edge in delta_E_edges:
+            overrides[edge] = kbt
+        output.append(electron_out_put_for_heat(
+            KBT_switcher=overrides,
+                gamma=gamma,
+                edges_path=edges_path,
+                t_s=t_s,
+                P0=P0
+        ))
+    plt.plot(delta_E_values, output)
+    plt.xlabel("Number of KBT")
+    plt.ylabel("Electron output")
+    plt.show()
+        
+
     
 
 def main():
@@ -251,13 +282,13 @@ def main():
 
     # need to construct a CLI parser for the filepath of the solar spectrum and pigment absorption spectra
     parser = argparse.ArgumentParser(description="Variables that can change in the file (maybe a better description is needed).")
-    parser.add_argument("File_name_star", type=str,nargs='?', help="filepath for the solar spectrum data", default="5800K.txt")
-    parser.add_argument("File_name_pig", type=str, nargs='?', help="provide the filepath for the absorption spectrum of the pigment", default="NCHL261(bchla_Qy).absorption.txt")
-    parser.add_argument('-s','--sigma', help='input what value the absorption cross-section is.', type=float, nargs='?', default= 1e-20)
+    parser.add_argument('-2', '--heatmap', help='This will return a heat map', action="store_true")
+    parser.add_argument('-1', '--oneDplot', help='This will return the 1-D plot', action="store_true")
     args = parser.parse_args()
 
     
-    gamma = gammaCalculation.Gamma(file_path_pigment=args.File_name_pig, file_path_star=args.File_name_star)
+    gamma = gammaCalculation.Gamma(file_path_pigment="NCHL261(bchla_Qy).absorption.txt", 
+                                   file_path_star="5800K.txt")
 
 
     non_delta_E_ox_edges: list = [
@@ -272,13 +303,17 @@ def main():
         
     ]
 
-    KBT_non_ox_values = np.linspace(0.0, 15, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_non_ox_values = np.linspace(0.0, 25, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
     KBT_ox_values = np.linspace(0.0, 15, 50)  # oxidation energy gap(s) from 0 → 20 kBT
 
-    graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_delta_E_ox_edges,
-                       delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
-    )
-             
+    if args.heatmap is True:
+        graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_delta_E_ox_edges,
+                      delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
+        )
+    elif args.oneDplot is True:
+        oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values)
+    else:
+        raise ValueError("Need to specify what plot you want")
 
 
 if __name__ == "__main__":
