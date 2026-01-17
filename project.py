@@ -265,6 +265,7 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
                 P0=P0
         ))
     plt.plot(delta_E_values, output)
+    plt.title("Optimal energy gaps for ΔE")
     plt.xlabel("Number of KBT")
     plt.ylabel("Electron output")
     plt.show()
@@ -284,6 +285,8 @@ def main():
     parser = argparse.ArgumentParser(description="Variables that can change in the file (maybe a better description is needed).")
     parser.add_argument('-2', '--heatmap', help='This will return a heat map', action="store_true")
     parser.add_argument('-1', '--oneDplot', help='This will return the 1-D plot', action="store_true")
+    parser.add_argument('-o', '--oxidation', help='Tells the program which edges to use', action="store_true")
+    parser.add_argument('-e', '--nonox', help='Essentially the same as above just not the oxidation edges', action="store_true")
     args = parser.parse_args()
 
     
@@ -303,15 +306,20 @@ def main():
         
     ]
 
-    KBT_non_ox_values = np.linspace(0.0, 25, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_ox_values = np.linspace(0.0, 15, 50)  # oxidation energy gap(s) from 0 → 20 kBT
+    KBT_non_ox_values = np.linspace(0.0, 25, 100)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_ox_values = np.linspace(0.0, 10, 100)  # oxidation energy gap(s) from 0 → 20 kBT
 
     if args.heatmap is True:
         graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_delta_E_ox_edges,
                       delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
         )
     elif args.oneDplot is True:
-        oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values)
+        if args.nonox is True:
+            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_delta_E_ox_edges, gamma=gamma, delta_E_values=KBT_non_ox_values)
+        elif args.oxidation is True:
+            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values)
+        else:
+            raise ValueError("Need to specify which edges you want to vary")
     else:
         raise ValueError("Need to specify what plot you want")
 
