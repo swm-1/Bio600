@@ -269,7 +269,48 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
     plt.xlabel("Number of KBT")
     plt.ylabel("Electron output")
     plt.show()
+    
+
+def grouped_edge_loader(file_path: str):
+    """
+    This function will take in the CSV file which contains the information about the system and group the edges depending on whether they are
+    the edges associated with ΔE_ox or ΔE_CS/ΔE_r.
+
+    The parameters of the function are:
+        - Edges_path -> this is the CSV that contains the info about the system
+
+    The function should return two lists. One being a list of edges associated with oxidation and the other being one associated with non-oxidation
+
+    Extra comments:
+        If all parameters need to be varied the function should be updated to sort each parameter accordingly 
+    """
+
+    with open (file_path, 'r', newline="") as f:
+        reader = csv.DictReader(f)
+        required = {"donor", "acceptor", "labels"}
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
+            raise ValueError("CSV file must contain a donor, acceptor and labels column")
+    
+        oxidation_edges = []
+        reduction_edges = []
+        charge_sep_edges = []
         
+        for row in reader:
+            i = int((row["donor"]).strip())
+            j = int((row["acceptor"]).strip())
+            if row["labels"] == "Ox":
+                oxidation_edges.append([i,j])
+            elif row["labels"] == "CS":
+                charge_sep_edges.append([i,j])
+            elif row["labels"] == "Red":
+                reduction_edges.append([i,j])
+        
+    non_ox_edges = reduction_edges + charge_sep_edges
+    # These lines are needed to format into list[tuple[int,int]]
+    group_1 = [tuple(pair) for pair in oxidation_edges] # Group_1 canonically should be for non_ΔE_ox_edges, but can be anything as long as it is specified.
+    group_2 = [tuple(pair) for pair in non_ox_edges]    # Group_2 canonically is the ΔE_ox_edges, but again this can be anything as long as it is specified.
+    return group_1,group_2
+
 
     
 
@@ -279,43 +320,34 @@ def main():
      The function then constructs P0 and creates the timestamps, then calls the relevant functions
 
     """
-    edges_path = "edges.csv"   # This line depends on the name of CSV file -> would CLI path be better?
-
+    
     # need to construct a CLI parser for the filepath of the solar spectrum and pigment absorption spectra
     parser = argparse.ArgumentParser(description="Variables that can change in the file (maybe a better description is needed).")
     parser.add_argument('-2', '--heatmap', help='This will return a heat map', action="store_true")
     parser.add_argument('-1', '--oneDplot', help='This will return the 1-D plot', action="store_true")
     parser.add_argument('-o', '--oxidation', help='Tells the program which edges to use', action="store_true")
     parser.add_argument('-e', '--nonox', help='Essentially the same as above just not the oxidation edges', action="store_true")
+    parser.add_argument ('-f', '--filepath', help='Tells the program where the information for the system is',  default='edges.csv')
     args = parser.parse_args()
 
     
     gamma = gammaCalculation.Gamma(file_path_pigment="NCHL261(bchla_Qy).absorption.txt", 
                                    file_path_star="5800K.txt")
 
+    edges_path = args.filepath
 
-    non_delta_E_ox_edges: list = [
-        (2,1),
-        (3,2),
-        (5,4)
-    ]
-
-    oxidation_edges: list = [
-        (4,2),
-        (5,3)
-        
-    ]
-
-    KBT_non_ox_values = np.linspace(0.0, 25, 100)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_ox_values = np.linspace(0.0, 10, 100)  # oxidation energy gap(s) from 0 → 20 kBT
+    oxidation_edges, non_oxidation_edges = grouped_edge_loader(file_path=edges_path)
+    
+    KBT_non_ox_values = np.linspace(0.0, 25, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_ox_values = np.linspace(0.0, 10, 20)  # oxidation energy gap(s) from 0 → 20 kBT
 
     if args.heatmap is True:
-        graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_delta_E_ox_edges,
+        graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_oxidation_edges,
                       delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
         )
     elif args.oneDplot is True:
         if args.nonox is True:
-            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_delta_E_ox_edges, gamma=gamma, delta_E_values=KBT_non_ox_values)
+            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_oxidation_edges, gamma=gamma, delta_E_values=KBT_non_ox_values)
         elif args.oxidation is True:
             oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values)
         else:
