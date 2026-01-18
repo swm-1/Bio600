@@ -282,7 +282,10 @@ def grouped_edge_loader(file_path: str):
     The function should return two lists. One being a list of edges associated with oxidation and the other being one associated with non-oxidation
 
     Extra comments:
-        If all parameters need to be varied the function should be updated to sort each parameter accordingly 
+        - If all parameters need to be varied the function should be updated to sort each parameter accordingly 
+        - The file must be formatted correctly with the reverse of ox, red or CS being labeled as those. If not 
+          this function will miss handel the file.
+
     """
 
     with open (file_path, 'r', newline="") as f:
@@ -321,13 +324,12 @@ def main():
 
     """
     
-    # need to construct a CLI parser for the filepath of the solar spectrum and pigment absorption spectra
-    parser = argparse.ArgumentParser(description="Variables that can change in the file (maybe a better description is needed).")
+    parser = argparse.ArgumentParser(description="Variables that can change in the file and need user specification.")
     parser.add_argument('-2', '--heatmap', help='This will return a heat map', action="store_true")
     parser.add_argument('-1', '--oneDplot', help='This will return the 1-D plot', action="store_true")
     parser.add_argument('-o', '--oxidation', help='Tells the program which edges to use', action="store_true")
     parser.add_argument('-e', '--nonox', help='Essentially the same as above just not the oxidation edges', action="store_true")
-    parser.add_argument ('-f', '--filepath', help='Tells the program where the information for the system is',  default='edges.csv')
+    parser.add_argument ('-f', '--filepath', help='Tells the program where the information for the system is')
     args = parser.parse_args()
 
     
@@ -335,6 +337,8 @@ def main():
                                    file_path_star="5800K.txt")
 
     edges_path = args.filepath
+    if edges_path ==  None:
+        edges_path = input("Please specify a filepath: ") # Not sure if this should be kept or not.
 
     oxidation_edges, non_oxidation_edges = grouped_edge_loader(file_path=edges_path)
     
