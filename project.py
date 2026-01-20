@@ -228,8 +228,8 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
         Z,
         origin="lower",
         extent =(
-            float(KBT_delta_E_ox_values[0]), float(KBT_delta_E_ox_values[-1]),
-            float(KBT_delta_E_values[0]), float(KBT_delta_E_values[-1])
+            float(-KBT_delta_E_ox_values[0]), float(-KBT_delta_E_ox_values[-1]),
+            float(-KBT_delta_E_values[0]), float(-KBT_delta_E_values[-1])
         ),
         aspect="auto"
     )
@@ -264,7 +264,8 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
                 t_s=t_s,
                 P0=P0
         ))
-    plt.plot(delta_E_values, output)
+    plt.plot(-delta_E_values, output)
+    plt.gca().invert_xaxis()
     plt.title("Optimal energy gaps for ΔE")
     plt.xlabel("Number of KBT")
     plt.ylabel("Electron output")
