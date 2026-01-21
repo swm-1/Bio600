@@ -322,7 +322,7 @@ def timeTakenForSteadyState (  edges_path: str, gamma: float, KBT_delta_E_values
     # initial probability vector
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0 
-    time = np.linspace(0,1,1000)
+    time = np.linspace(0,5,10000)
    
     delta_E_ox_edges, delta_E_edges = grouped_edge_loader(edges_path)
     all_edges = delta_E_ox_edges + delta_E_edges
@@ -341,21 +341,38 @@ def timeTakenForSteadyState (  edges_path: str, gamma: float, KBT_delta_E_values
         )
         K = make_K_matrix(A=A)
         P_t = calc_evolution(P0=P0, t_ps=time, K=K)
-        final_node = P_t[:,-1]
-        tolerance = 0.0000002
-        mask = final_node[1:] - final_node[:-1] <= np.abs(tolerance)
-        if mask.any():
-            k = mask.argmax()
-            time_taken.append(time[k+1])
-        else:
-            raise ValueError("No values are close enough to be stable")
+        probability_check(P_t=P_t)
+        x = P_t[:,-1] #final node
+        tolerance = 0.01
+        mask = []
+        for j in x:
+            mask.append(np.abs(x[-1] - j))
+        mask = np.asanyarray(mask) <= tolerance
+
+        count = 0
+        threshold = 100
+        for n, value in enumerate(mask):
+
+            if count >= threshold:
+                index = n - threshold
+                time_taken.append(time[index])
+                break
+    
+            elif value == True:
+                count +=1
+    
+            else:
+                count = 0
+        
+
+
     
     return time_taken
 
 
 def graphForTimeSteadyState(times_group_1, KBT_delta_E_values, times_group_2 = None):
 
-    plt.plot(-KBT_delta_E_values, times_group_1, label= "singletrap")
+    plt.plot(-KBT_delta_E_values, times_group_1, label= "single trap")
     if times_group_2 is not None:
         plt.plot(-KBT_delta_E_values, times_group_2, label="double trap")
         plt.gca().invert_xaxis()
