@@ -322,7 +322,7 @@ def timeTakenForSteadyState (  edges_path: str, gamma: float, KBT_delta_E_values
     # initial probability vector
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0 
-    time = np.linspace(0,5,10000)
+    time = np.linspace(0,1,10000)
    
     delta_E_ox_edges, delta_E_edges = grouped_edge_loader(edges_path)
     all_edges = delta_E_ox_edges + delta_E_edges
@@ -342,12 +342,11 @@ def timeTakenForSteadyState (  edges_path: str, gamma: float, KBT_delta_E_values
         K = make_K_matrix(A=A)
         P_t = calc_evolution(P0=P0, t_ps=time, K=K)
         probability_check(P_t=P_t)
-        x = P_t[:,-1] #final node
-        tolerance = 0.01
-        mask = []
-        for j in x:
-            mask.append(np.abs(x[-1] - j))
-        mask = np.asanyarray(mask) <= tolerance
+        y = P_t[:,-1] #final node
+        tolerance = 0.001
+        dy = np.diff(y)
+        dt = np.diff(time)
+        mask = dy / dt <= tolerance
 
         count = 0
         threshold = 100
@@ -376,6 +375,8 @@ def graphForTimeSteadyState(times_group_1, KBT_delta_E_values, times_group_2 = N
     if times_group_2 is not None:
         plt.plot(-KBT_delta_E_values, times_group_2, label="double trap")
         plt.gca().invert_xaxis()
+        plt.xlabel("ΔE in KBT")
+        plt.ylabel("Time taken to reach steady state [D+PTA-]/[D+PTTA-] in seconds")
         plt.legend()
         plt.show()
     else:
