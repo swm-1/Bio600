@@ -228,20 +228,20 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
         Z,
         origin="lower",
         extent =(
-            float(-KBT_delta_E_ox_values[0]), float(-KBT_delta_E_ox_values[-1]),
-            float(-KBT_delta_E_values[0]), float(-KBT_delta_E_values[-1])
+            float(-KBT_delta_E_ox_values[0]), float(-KBT_delta_E_ox_values[-1]), # x-axis
+            float(-KBT_delta_E_values[0]), float(-KBT_delta_E_values[-1])        # y-axis
         ),
         aspect="auto"
     )
-    plt.colorbar(label="Electron output (arb. units)")
-    plt.xlabel("ΔEox (in KBT)")
-    plt.ylabel("ΔE (in KBT)")
-    plt.title("Optimal energy gaps for a simple anoxygenic photosystem")
+    plt.colorbar(label="Electron output")
+    plt.xlabel("ΔEox in KBT")
+    plt.ylabel("ΔE in KBT")
+    plt.title("Optimal ΔE values")
     plt.tight_layout()
     plt.show()
 
 def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]], 
-                        gamma: float, delta_E_values: np.ndarray):
+                        gamma: float, delta_E_values: np.ndarray, Graph_title: str):
     """
     I should write a docstring
     """
@@ -266,8 +266,8 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
         ))
     plt.plot(-delta_E_values, output)
     plt.gca().invert_xaxis()
-    plt.title("Optimal energy gaps for ΔE")
-    plt.xlabel("Number of KBT")
+    plt.title(Graph_title) #Optimal energy gaps for ΔE
+    plt.xlabel("ΔE in KBT")
     plt.ylabel("Electron output")
     plt.show()
     
@@ -425,9 +425,11 @@ def main():
         graphForTimeSteadyState(times_group_1=time_group_1, KBT_delta_E_values=KBT_non_ox_values, times_group_2=time_group_2)
     elif args.oneDplot is True:
         if args.nonox is True:
-            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_oxidation_edges, gamma=gamma, delta_E_values=KBT_non_ox_values)
+            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_oxidation_edges, gamma=gamma, delta_E_values=KBT_non_ox_values,
+                                Graph_title="Optimal ΔE values for Charge seperation and Reduction")
         elif args.oxidation is True:
-            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values)
+            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values,
+                                Graph_title="Optimal ΔE values for Oxidation")
         else:
             raise ValueError("Need to specify which edges you want to vary")
     else:
