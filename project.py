@@ -162,7 +162,7 @@ def electron_out_put_for_heat(KBT_switcher: Optional[Dict[Tuple[int, int], float
 
 
 def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tuple[int, int]],
-                       delta_E_ox_edges: list[tuple[int, int]],KBT_delta_E_values: np.ndarray,KBT_delta_E_ox_values: np.ndarray) -> None:
+                       delta_E_ox_edges: list[tuple[int, int]],KBT_delta_E_values: np.ndarray,KBT_delta_E_ox_values: np.ndarray, time: np.ndarray) -> None:
     """
     The purpose of this function is to output a heat map that corresponds to the electron output at varying values of KBT.
 
@@ -192,8 +192,6 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     # initial probability vector
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0 
-    # this is the time that the calculation will be run for
-    t_s = np.linspace(0, 10, num=1000)
 
     # Create an array to store the calculated electron outputs in
     Z = np.zeros((len(KBT_delta_E_values), len(KBT_delta_E_ox_values)), dtype=float)
@@ -217,7 +215,7 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
                 KBT_switcher=overrides,
                 gamma=gamma,
                 edges_path=edges_path,
-                t_s=t_s,
+                t_s=time,
                 P0=P0,
             )
             Z[i, j] = electron_output
@@ -241,7 +239,7 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     plt.show()
 
 def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]], 
-                        gamma: float, delta_E_values: np.ndarray, Graph_title: str):
+                        gamma: float, delta_E_values: np.ndarray, Graph_title: str, time: np.ndarray) -> None:
     """
     I should write a docstring
     """
@@ -250,7 +248,6 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
     N = A_for_size.shape[0]
     P0=np.zeros(N,dtype=float)
     P0[0] = 1.0
-    t_s = np.linspace(0,10,num=1000)
 
     overrides = {}
     output = []
@@ -261,7 +258,7 @@ def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]],
             KBT_switcher=overrides,
                 gamma=gamma,
                 edges_path=edges_path,
-                t_s=t_s,
+                t_s=time,
                 P0=P0
         ))
     plt.plot(-delta_E_values, output)
@@ -315,14 +312,13 @@ def grouped_edge_loader(file_path: str):
     group_2 = [tuple(pair) for pair in non_ox_edges]    # Group_2 canonically is the ΔE_ox_edges, but again this can be anything as long as it is specified.
     return group_1,group_2
 
-def timeTakenForSteadyState (  edges_path: str, gamma: float, KBT_delta_E_values: np.ndarray) -> list:
+def timeTakenForSteadyState (edges_path: str, gamma: float, KBT_delta_E_values: np.ndarray, time: np.ndarray) -> list:
     
     A_for_size = adjacency_matrix(gamma, edges_path)
     N = A_for_size.shape[0]
     # initial probability vector
     P0 = np.zeros(N, dtype=float)
     P0[0] = 1.0 
-    time = np.linspace(0,1,10000)
    
     delta_E_ox_edges, delta_E_edges = grouped_edge_loader(edges_path)
     all_edges = delta_E_ox_edges + delta_E_edges
@@ -406,6 +402,8 @@ def main():
     gamma = gammaCalculation.Gamma(file_path_pigment="NCHL261(bchla_Qy).absorption.txt", 
                                    file_path_star="5800K.txt")
 
+    time_s = np.linspace(0,1,10000)
+
     edges_path = args.filepath
     if edges_path ==  None:
         edges_path = input("Please specify a filepath: ") # Not sure if this should be kept or not.
@@ -417,19 +415,19 @@ def main():
 
     if args.heatmap is True:
         graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_oxidation_edges,
-                      delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
-        )
+                           delta_E_ox_edges=oxidation_edges, KBT_delta_E_values=KBT_non_ox_values, KBT_delta_E_ox_values=KBT_ox_values,
+                            time=time_s)
     if args.time is True:
-        time_group_1 = timeTakenForSteadyState(edges_path=edges_path, gamma=gamma, KBT_delta_E_values= KBT_non_ox_values)
-        time_group_2 = timeTakenForSteadyState(edges_path="edges2Trap.csv", gamma=gamma, KBT_delta_E_values=KBT_non_ox_values)
+        time_group_1 = timeTakenForSteadyState(edges_path=edges_path, gamma=gamma, KBT_delta_E_values= KBT_non_ox_values, time=time_s)
+        time_group_2 = timeTakenForSteadyState(edges_path="edges2Trap.csv", gamma=gamma, KBT_delta_E_values=KBT_non_ox_values, time=time_s)
         graphForTimeSteadyState(times_group_1=time_group_1, KBT_delta_E_values=KBT_non_ox_values, times_group_2=time_group_2)
     elif args.oneDplot is True:
         if args.nonox is True:
             oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_oxidation_edges, gamma=gamma, delta_E_values=KBT_non_ox_values,
-                                Graph_title="Optimal ΔE values for Charge seperation and Reduction")
+                                Graph_title="Optimal ΔE values for Charge seperation and Reduction", time=time_s)
         elif args.oxidation is True:
             oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values,
-                                Graph_title="Optimal ΔE values for Oxidation")
+                                Graph_title="Optimal ΔE values for Oxidation", time=time_s)
         else:
             raise ValueError("Need to specify which edges you want to vary")
     else:
