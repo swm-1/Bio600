@@ -238,36 +238,112 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     plt.tight_layout()
     plt.show()
 
-def oneDimensionalGraph(edges_path: str, delta_E_edges: list[tuple[int,int]], 
-                        gamma: float, delta_E_values: np.ndarray, Graph_title: str, time: np.ndarray) -> None:
+def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarray, 
+                        Graph_title: str, time: np.ndarray, oxidation: bool, non_oxidation: bool ,edges_path_2 =None) -> None:
     """
     I should write a docstring
     """
 
-    A_for_size = adjacency_matrix(gamma_s=gamma,edges_csv=edges_path)
-    N = A_for_size.shape[0]
-    P0=np.zeros(N,dtype=float)
-    P0[0] = 1.0
+    if edges_path_2 is None:
+        A_for_size = adjacency_matrix(gamma_s=gamma,edges_csv=edges_path)
+        N = A_for_size.shape[0]
+        P0=np.zeros(N,dtype=float)
+        P0[0] = 1.0
+        delta_E_edges_ox,delta_E_edges_non_ox = grouped_edge_loader(file_path=edges_path)
+        
+        if oxidation is True:
+            delta_E_edges = delta_E_edges_ox
+        elif non_oxidation is True:
+            delta_E_edges = delta_E_edges_non_ox
+        else:
+            raise ValueError("Something has gone wrong") 
 
-    overrides = {}
-    output = []
-    for kbt in delta_E_values:
-        for edge in delta_E_edges:
-            overrides[edge] = kbt
-        output.append(electron_out_put_for_heat(
-            KBT_switcher=overrides,
-                gamma=gamma,
-                edges_path=edges_path,
-                t_s=time,
-                P0=P0
-        ))
-    plt.plot(-delta_E_values, output)
-    plt.gca().invert_xaxis()
-    plt.title(Graph_title) #Optimal energy gaps for ΔE
-    plt.xlabel("ΔE in KBT")
-    plt.ylabel("Electron output")
-    plt.show()
     
+        overrides = {}
+        output = []
+        for kbt in delta_E_values:
+            for edge in delta_E_edges:
+                overrides[edge] = kbt
+            output.append(electron_out_put_for_heat(
+                KBT_switcher=overrides,
+                    gamma=gamma,
+                    edges_path=edges_path,
+                    t_s=time,
+                    P0=P0
+            ))
+        plt.plot(-delta_E_values, output)
+        plt.gca().invert_xaxis()
+        plt.title(Graph_title) #Optimal energy gaps for ΔE
+        plt.xlabel("ΔE in KBT")
+        plt.ylabel("Electron output")
+        plt.show()
+    
+    elif edges_path_2 is not None:
+
+        A_for_size = adjacency_matrix(gamma_s=gamma,edges_csv=edges_path)
+        N = A_for_size.shape[0]
+        P0=np.zeros(N,dtype=float)
+        P0[0] = 1.0
+        delta_E_edges_ox,delta_E_edges_non_ox = grouped_edge_loader(file_path=edges_path)
+
+        if oxidation is True:
+            delta_E_edges = delta_E_edges_ox
+        elif non_oxidation is True:
+            delta_E_edges = delta_E_edges_non_ox
+        else:
+            raise ValueError("Something went wrong")
+    
+        overrides = {}
+        output = []
+        for kbt in delta_E_values:
+            for edge in delta_E_edges:
+                overrides[edge] = kbt
+            output.append(electron_out_put_for_heat(
+                KBT_switcher=overrides,
+                    gamma=gamma,
+                    edges_path=edges_path,
+                    t_s=time,
+                    P0=P0
+            ))
+
+        A_for_size_2 = adjacency_matrix(gamma_s=gamma,edges_csv=edges_path_2)
+        N_2 = A_for_size_2.shape[0]
+        P0_2=np.zeros(N_2,dtype=float)
+        P0_2[0] = 1.0
+        delta_E_edges_ox_2,delta_E_edges_non_ox_2 = grouped_edge_loader(file_path=edges_path_2)
+
+        if oxidation is True:
+            delta_E_edges_2 = delta_E_edges_ox_2
+        elif non_oxidation is True:
+            delta_E_edges_2 = delta_E_edges_non_ox_2
+        else:
+            raise ValueError("Something went wrong")
+
+    
+        overrides_2 = {}
+        output_2 = []
+        for kbt_2 in delta_E_values:
+            for edge_2 in delta_E_edges_2:
+                overrides_2[edge_2] = kbt_2
+            output_2.append(electron_out_put_for_heat(
+                KBT_switcher=overrides_2,
+                    gamma=gamma,
+                    edges_path=edges_path_2,
+                    t_s=time,
+                    P0=P0_2
+            ))
+        
+        plt.plot(-delta_E_values, output, labels='[DPTA]')
+        plt.plot(-delta_E_values, output_2, labels='[DPTTA]')
+        plt.gca().invert_xaxis()
+        plt.title(Graph_title) #Optimal energy gaps for ΔE
+        plt.xlabel("ΔE in KBT")
+        plt.ylabel("Electron output")
+        plt.show()
+        
+
+
+
 
 def grouped_edge_loader(file_path: str):
     """
@@ -396,13 +472,14 @@ def main():
     parser.add_argument('-e', '--nonox', help='Essentially the same as above just not the oxidation edges', action="store_true")
     parser.add_argument ('-f', '--filepath', help='Tells the program where the information for the system is')
     parser.add_argument('-t', '--time', help='This will show how long it takes for a given system to reach the steady state', action='store_true')
+    parser.add_argument('-c','--comparison', help='this argument compliments the 1-D plot as it allows a comparison to be provided', action='store_true')
     args = parser.parse_args()
 
     
     gamma = gammaCalculation.Gamma(file_path_pigment="NCHL261(bchla_Qy).absorption.txt", 
                                    file_path_star="5800K.txt")
 
-    time_s = np.linspace(0,1,10000)
+    time_s = np.linspace(0,1,1000)
 
     edges_path = args.filepath
     if edges_path ==  None:
@@ -411,7 +488,7 @@ def main():
     oxidation_edges, non_oxidation_edges = grouped_edge_loader(file_path=edges_path)
     
     KBT_non_ox_values = np.linspace(0.0, 25, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_ox_values = np.linspace(0.0, 10, 20)  # oxidation energy gap(s) from 0 → 20 kBT
+    KBT_ox_values = np.linspace(0.0, 10, 50)  # oxidation energy gap(s) from 0 → 20 kBT
 
     if args.heatmap is True:
         graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_oxidation_edges,
@@ -421,13 +498,26 @@ def main():
         time_group_1 = timeTakenForSteadyState(edges_path=edges_path, gamma=gamma, KBT_delta_E_values= KBT_non_ox_values, time=time_s)
         time_group_2 = timeTakenForSteadyState(edges_path="edges2Trap.csv", gamma=gamma, KBT_delta_E_values=KBT_non_ox_values, time=time_s)
         graphForTimeSteadyState(times_group_1=time_group_1, KBT_delta_E_values=KBT_non_ox_values, times_group_2=time_group_2)
+    
     elif args.oneDplot is True:
-        if args.nonox is True:
-            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=non_oxidation_edges, gamma=gamma, delta_E_values=KBT_non_ox_values,
-                                Graph_title="Optimal ΔE values for Charge seperation and Reduction", time=time_s)
+        if args.comparison is True:
+            if args.nonox is True:
+                oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_non_ox_values,
+                                Graph_title="Optimal ΔE values for Charge seperation and Reduction", time=time_s, oxidation=False, non_oxidation=True,
+                                edges_path_2=input("Please enter the file name for comparison: "))
+            elif args.oxidation is True:
+                oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_ox_values,
+                                Graph_title="Optimal ΔE values for Oxidation", time=time_s, oxidation=True, non_oxidation=False,
+                                edges_path_2=input("Please enter the file name for comparison: "))
+            else:
+                raise ValueError("Need to specify which edges you want to vary")
+
+        elif args.nonox is True:
+            oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_non_ox_values,
+                                Graph_title="Optimal ΔE values for Charge seperation and Reduction", time=time_s, oxidation=False, non_oxidation=True)
         elif args.oxidation is True:
-            oneDimensionalGraph(edges_path=edges_path, delta_E_edges=oxidation_edges, gamma=gamma, delta_E_values=KBT_ox_values,
-                                Graph_title="Optimal ΔE values for Oxidation", time=time_s)
+            oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_ox_values,
+                                Graph_title="Optimal ΔE values for Oxidation", time=time_s, oxidation=True, non_oxidation=False)
         else:
             raise ValueError("Need to specify which edges you want to vary")
     else:
