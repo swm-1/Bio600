@@ -487,8 +487,8 @@ def main():
 
     oxidation_edges, non_oxidation_edges = grouped_edge_loader(file_path=edges_path)
     
-    KBT_non_ox_values = np.linspace(0.0, 25, 50)  # ΔE_CS = ΔE_r from 0 → 20 kBT
-    KBT_ox_values = np.linspace(0.0, 10, 50)  # oxidation energy gap(s) from 0 → 20 kBT
+    KBT_non_ox_values = np.linspace(0.0, 25, 100)  # ΔE_CS = ΔE_r from 0 → 20 kBT
+    KBT_ox_values = np.linspace(0.0, 25, 100)  # oxidation energy gap(s) from 0 → 20 kBT
 
     if args.heatmap is True:
         graphing_heat_map (edges_path=edges_path, gamma=gamma, delta_E_edges= non_oxidation_edges,
