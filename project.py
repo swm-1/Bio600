@@ -221,7 +221,7 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
             Z[i, j] = electron_output
 
     # 4. Plot heatmap
-    plt.figure()
+    plt.figure(figsize=(8,5), constrained_layout=True)
     plt.imshow(
         Z,
         origin="lower",
@@ -232,10 +232,9 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
         aspect="auto"
     )
     plt.colorbar(label="Electron output")
-    plt.xlabel("ΔEox in KBT")
-    plt.ylabel("ΔE in KBT")
-    plt.title("Optimal ΔE values")
-    plt.tight_layout()
+    plt.xlabel(r'$\Delta E_D$ in $K_BT$')
+    plt.ylabel(r'$\Delta E$ in $K_BT$')
+    plt.title(r'Optimal $\Delta E$ values')
     plt.show()
 
 def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarray, 
@@ -333,12 +332,14 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
                     P0=P0_2
             ))
         
-        plt.plot(-delta_E_values, output, labels='[DPTA]')
-        plt.plot(-delta_E_values, output_2, labels='[DPTTA]')
+        plt.plot(-delta_E_values, output, label='[DPTA]')
+        plt.plot(-delta_E_values, output_2, label='[DPTTA]')
         plt.gca().invert_xaxis()
         plt.title(Graph_title) #Optimal energy gaps for ΔE
-        plt.xlabel("ΔE in KBT")
+        plt.xlabel(r'$\Delta E$ in $K_BT$')
         plt.ylabel("Electron output")
+        plt.legend()
+        plt.tight_layout()
         plt.show()
         
 
@@ -447,7 +448,7 @@ def graphForTimeSteadyState(times_group_1, KBT_delta_E_values, times_group_2 = N
     if times_group_2 is not None:
         plt.plot(-KBT_delta_E_values, times_group_2, label="double trap")
         plt.gca().invert_xaxis()
-        plt.xlabel("ΔE in KBT")
+        plt.xlabel(r'$\Delta E$ in $K_BT$')
         plt.ylabel("Time taken to reach steady state [D+PTA-]/[D+PTTA-] in seconds")
         plt.legend()
         plt.show()
@@ -503,11 +504,11 @@ def main():
         if args.comparison is True:
             if args.nonox is True:
                 oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_non_ox_values,
-                                Graph_title="Optimal ΔE values for Charge seperation and Reduction", time=time_s, oxidation=False, non_oxidation=True,
+                                Graph_title="Optimal ΔE values for charge seperation and acceptor reduction", time=time_s, oxidation=False, non_oxidation=True,
                                 edges_path_2=input("Please enter the file name for comparison: "))
             elif args.oxidation is True:
                 oneDimensionalGraph(edges_path=edges_path, gamma=gamma, delta_E_values=KBT_ox_values,
-                                Graph_title="Optimal ΔE values for Oxidation", time=time_s, oxidation=True, non_oxidation=False,
+                                Graph_title="Optimal ΔE values for the oxidation of the donor", time=time_s, oxidation=True, non_oxidation=False,
                                 edges_path_2=input("Please enter the file name for comparison: "))
             else:
                 raise ValueError("Need to specify which edges you want to vary")
