@@ -20,9 +20,25 @@ def beta_from_T(T_K: float) -> float:
 
 def reverse_rate(k_f: float, KBT: float) -> float:
     '''
-    The purpose of this function is to calculate the reverse rate in a way that satisfies detailed balance.
-    Detailed balance definition:
-    k_r / k_f = exp(-deltaE * beta)
+    Function parameters:
+        k_f -> This parameter is the forward rate for the transfer between i -> j (nodes). This parameter should be loaded directly from
+               the csv file.
+        KBT -> This parameter is the energy gap between two nodes/states and can be loaded either from the csv file or from the switcher.
+
+    Returns:
+        This function should return the reverse rate, i.e. the rate for the transfer j -> i.
+
+    Notes:
+        The backwards rate relies on the detailed balance relationship. Detailed balance can be defined as:
+                                        k_r / k_f = exp(ΔE / KBT)
+        By using KBT as the way we express energy (instead of eV) it simplifies to:
+                                        k_r / k_f = exp(KBT)
+        However, the way the function uses detailed balance is wrong. In the function we set the value of KBT to be negative rather than 
+        positive. This is done because the values that we feed in are positive KBT values, when in actual fact we should be feeding negative
+        KBT values into the function. Therefore after this specification the relationship of detailed balance is maintained. 
+
+        Perhaps in the future it should be negative values being passed in, but at the moment it is preferable to cast the positive numbers 
+        to negative ones within the exponent.
     '''
     k_reverse = (k_f * np.exp(-KBT))
     return k_reverse
@@ -31,9 +47,15 @@ def reverse_rate(k_f: float, KBT: float) -> float:
 def adjacency_matrix(gamma_s: float, edges_csv: str
                      , KBT_switcher: Optional[Dict[Tuple[int,int],float]] = None) -> np.ndarray:
     """
-    This function loads information about the system.The information is contained within a single 
-    CSV file that contains the donor and acceptor nodes and also delta G values or the rate of transfer.
-    The output of the function is the weighted A (Adjacency) matrix.
+    Function parameters:
+        gamma_s      -> This parameter is essentially just the value for gamma, however it is not really neccissary as the value of gamma has been 
+                        pre-set in the csv file.
+        edges_csv    -> This parameter is the file path or just the file that the program should use. This is the file that contains all the information 
+                        about the system.
+        KBT_switcher -> This is a dictionary of KBT values each corresponding to a specific edge. This parameter is what allows the sweeps between ranges
+                        of KBT values.
+        Returns:
+            This function should return the weighted adjacency matrix of the system.
     """ 
     
     
@@ -108,6 +130,19 @@ def make_K_matrix(A: np.ndarray) -> np.ndarray:
 
 
 def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarray:
+    """
+    Parameters:
+        K   -> This parameter is the rate matrix.
+        P0  -> This parameter is the initial probability vector.
+        t_s -> This parameter is how long we want the simulation to run for.
+
+    Returns:
+        This should return a new matrix where the number of columns represents how many nodes in the system there are, and the columns 
+        represent the probability of an electron being in each node. The word node here is analogous to state. 
+
+    Notes:
+        There is definately a better way of calculating this, this may be on the order of O(n^3). However, I have yet to find a better method.
+    """
     
     out = []
     for i in t_ps:
@@ -118,6 +153,14 @@ def calc_evolution(K: np.ndarray, P0: np.ndarray, t_ps: np.ndarray) -> np.ndarra
 
 
 def probability_check(P_t: np.ndarray)-> None:
+
+    """
+    Function parameters:
+        P_t -> This is the matrix of probabilities.
+
+    Returns:
+        This function should only return something if the law of probability conservation is broken
+    """
     
     sum_probs = np.sum(P_t, axis= 1)
     if np.isclose(sum_probs, 1, rtol=1e-2).all():
@@ -126,7 +169,7 @@ def probability_check(P_t: np.ndarray)-> None:
         raise ValueError("Probabilities do not sum to 1")
         
 
-def electron_out_put_for_heat(KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
+def electron_output(KBT_switcher: Optional[Dict[Tuple[int, int], float]], gamma: float, 
                                edges_path: str,   t_s: np.ndarray, P0: np.ndarray) -> float:
     """
     Function parameters:
@@ -144,7 +187,7 @@ def electron_out_put_for_heat(KBT_switcher: Optional[Dict[Tuple[int, int], float
         The function should return the electron output for a given set of conditions.
 
     Notes:
-        This function should be pretty self explanitory.
+        This function should be pretty self explanitory. 
     """
     A = adjacency_matrix(
         gamma_s=gamma,
@@ -182,6 +225,11 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
     
     Returns:
         The function in and of itself does not return anything, the whole purpose of it is to generate a heat map.
+
+    Notes:
+        The axis have been set to negative values. This is essentially solving the same problem as the one described 
+        in the detailed balance function. Because the KBT values are positive and should be negative we must manually 
+        flip the axis sign.
                                                 
     """
     
@@ -211,7 +259,7 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
                 overrides[edge] = kbt_ox
 
             # Now compute electron output for this combination
-            electron_output = electron_out_put_for_heat(
+            electron_output = electron_output(
                 KBT_switcher=overrides,
                 gamma=gamma,
                 edges_path=edges_path,
@@ -240,7 +288,20 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
 def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarray, 
                         Graph_title: str, time: np.ndarray, oxidation: bool, non_oxidation: bool ,edges_path_2 =None) -> None:
     """
-    I should write a docstring
+    Function parameters:
+        edges_path     -> This parameter is the file path for the program.
+        gamma          -> The calculated excitation rate, this can be ignored.
+        delta_E_values -> This parameter is an array of KBT values, tells the function what values you want to sweep through.
+        Graph_title    -> The title of the graph.
+        time           -> How long the simulation should be run for.
+        oxidation      -> This is a switch, when true the graph output will show how dependant the electron output is on the oxidation
+                          edges.
+        non_oxidation  -> Again this is the same as above though the only difference is that the graph output will show the dependance 
+                          of the electron output of all edges that do not correspond to oxidation.
+        edges_path_2   -> This parameter allows for a comparison plot to be produced.
+
+        Returns:
+            This function returns a 1-D graph with electron output on the y axis and energy in KBT on the x axis.
     """
 
     if edges_path_2 is None:
@@ -263,7 +324,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
         for kbt in delta_E_values:
             for edge in delta_E_edges:
                 overrides[edge] = kbt
-            output.append(electron_out_put_for_heat(
+            output.append(electron_output(
                 KBT_switcher=overrides,
                     gamma=gamma,
                     edges_path=edges_path,
@@ -273,7 +334,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
         plt.plot(-delta_E_values, output)
         plt.gca().invert_xaxis()
         plt.title(Graph_title) #Optimal energy gaps for ΔE
-        plt.xlabel("ΔE in KBT")
+        plt.xlabel(r"$\Delta E$ in $K_BT$")
         plt.ylabel("Electron output")
         plt.show()
     
@@ -297,7 +358,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
         for kbt in delta_E_values:
             for edge in delta_E_edges:
                 overrides[edge] = kbt
-            output.append(electron_out_put_for_heat(
+            output.append(electron_output(
                 KBT_switcher=overrides,
                     gamma=gamma,
                     edges_path=edges_path,
@@ -324,7 +385,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
         for kbt_2 in delta_E_values:
             for edge_2 in delta_E_edges_2:
                 overrides_2[edge_2] = kbt_2
-            output_2.append(electron_out_put_for_heat(
+            output_2.append(electron_output(
                 KBT_switcher=overrides_2,
                     gamma=gamma,
                     edges_path=edges_path_2,
@@ -390,6 +451,20 @@ def grouped_edge_loader(file_path: str):
     return group_1,group_2
 
 def timeTakenForSteadyState (edges_path: str, gamma: float, KBT_delta_E_values: np.ndarray, time: np.ndarray) -> list:
+
+    """
+    Function parameters:
+        edges_path         -> The file path for the function.
+        gamma              -> The calculated excitation rate.
+        KBT_delta_E_values -> This parameter is an array of KBT values, tells the function what values you want to sweep through.
+        time               -> The amount of time the simulation should be run for.
+
+    Returns:
+        A list of times. Where each induvidual point is the time taken to reach the steady state at a given KBT value.
+
+    Notes:
+        I have not found a use for this. The way the steady state is found has gone through multiple iterations, with this being the best way I have found.
+    """
     
     A_for_size = adjacency_matrix(gamma, edges_path)
     N = A_for_size.shape[0]
@@ -460,11 +535,7 @@ def graphForTimeSteadyState(times_group_1, KBT_delta_E_values, times_group_2 = N
 
 
 def main():
-    """
-     reads edges from 'edges.csv' in the current folder (or change the filename below). 
-     The function then constructs P0 and creates the timestamps, then calls the relevant functions
-
-    """
+    
     
     parser = argparse.ArgumentParser(description="Variables that can change in the file and need user specification.")
     parser.add_argument('-2', '--heatmap', help='This will return a heat map', action="store_true")
