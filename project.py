@@ -331,6 +331,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
                     t_s=time,
                     P0=P0
             ))
+        plt.figure(figsize=(8,5), constrained_layout=True)
         plt.plot(-delta_E_values, output)
         plt.gca().invert_xaxis()
         plt.title(Graph_title) #Optimal energy gaps for ΔE
@@ -393,6 +394,7 @@ def oneDimensionalGraph(edges_path: str, gamma: float, delta_E_values: np.ndarra
                     P0=P0_2
             ))
         
+        plt.figure(figsize=(8,5), constrained_layout=True)
         plt.plot(-delta_E_values, output, label='[DPTA]')
         plt.plot(-delta_E_values, output_2, label='[DPTTA]')
         plt.gca().invert_xaxis()
