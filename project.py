@@ -259,14 +259,14 @@ def graphing_heat_map (  edges_path: str, gamma: float, delta_E_edges: list[tupl
                 overrides[edge] = kbt_ox
 
             # Now compute electron output for this combination
-            electron_output = electron_output(
+            e_output = electron_output(
                 KBT_switcher=overrides,
                 gamma=gamma,
                 edges_path=edges_path,
                 t_s=time,
                 P0=P0,
             )
-            Z[i, j] = electron_output
+            Z[i, j] = e_output
 
     # 4. Plot heatmap
     plt.figure(figsize=(8,5), constrained_layout=True)
